@@ -1,0 +1,10 @@
+langchain-google-vertexai
+google-cloud-aiplatform
+langgraph==0.5.3
+uv
+chromadb
+sentence-transformers
+langchain-huggingface
+langchain-chroma
+wikipedia
+faiss-cpu
