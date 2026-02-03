@@ -1,12 +1,13 @@
-# 2-Day Intensive Bootcamp: Agentic Wikipedia (Vertex AI → Databricks)
+# 2-Day Intensive Bootcamp: Roadside Geology (Vertex AI → Databricks)
 
-Goal: In **2 days**, build the same “Agentic Wikipedia” proof-of-concept twice:
+Goal: In **2 days**, build the same “Roadside Geology”-style (Wikipedia-only) proof-of-concept twice:
 1) **Day 1:** GCP + **Vertex AI** (Gemini + Vertex embeddings)  
 2) **Day 2:** **Databricks** (Model Serving + Agent tooling + evaluation workflow)
 
-This repo already includes two specs to follow:
-- `docs/agentic_wikipedia_gcp_spec.md` (Vertex AI)
-- `docs/agentic_wikipedia_dbrx_spec.md` (Databricks)
+This repo includes:
+- `docs/roadside_geology_v0_mvp_spec.md` (the v0 product spec to implement)
+- `docs/agentic_wikipedia_gcp_spec.md` (Vertex AI wiring template)
+- `docs/agentic_wikipedia_dbrx_spec.md` (Databricks wiring template)
 
 Databricks workflow reference:
 - [Databricks Generative AI developer workflow](https://docs.databricks.com/aws/en/generative-ai/tutorials/ai-cookbook/genai-developer-workflow)
@@ -16,82 +17,84 @@ Databricks workflow reference:
 ## Success Criteria (use these both days)
 
 **P0 (must-have)**
-- A notebook runs end-to-end: **load Wikipedia docs → embed → retrieve → answer**.
-- An **agentic workflow** (LangGraph) calls at least one tool (retriever/search) and returns an answer with **citations** (URLs/titles).
-- A small **evaluation set** (≈10 questions) runs and produces a simple scorecard (quality + latency).
+- A notebook runs end-to-end: **route → Wikipedia GeoSearch → retrieve → generate stop cards with citations**.
+- An **agentic workflow** (LangGraph) uses tools (`geosearch`, `retrieve`, `write_stop_card`) and enforces **Wikipedia-only citations**.
+- Outputs: `guide.json` + `guide.md` with **5–12 stops** for a short test route (20–100 km).
+- A small **evaluation set** (≈10 questions) runs and produces a simple scorecard (quality + latency + citation validity).
 
 **P1 (nice-to-have)**
-- Swap FAISS for a managed vector store (Vertex AI Vector Search / Databricks Vector Search).
-- Add feedback capture + iterative improvement loop.
-- Package into a small API (FastAPI) for “pre-prod” sharing.
+- Swap FAISS for managed vector search (Vertex AI Vector Search / Databricks Vector Search).
+- Add a “Drive Mode” output (short summaries / optional audio script) with offline-friendly caching.
+- Add feedback capture (thumbs up/down + comment) and an improvement loop.
+- Package into a small API for pre-prod sharing.
 
 ---
 
 ## Prework (30–60 min, before Day 1)
 
-1) Pick a use case and lock it:
-- Define `query_terms` (what Wikipedia topics you’ll index)
-- Define `example_question` and 10 eval questions
-- Set `max_docs` to **10–50** initially (keep cost + iteration time low)
+1) Pick a test route and lock it (for parity across days):
+- Short route (20–100 km) with known scenery/formation interest
+- v0 input format: **GPX** or a pasted list of `{lat, lon}` points
 
-2) Create a parity checklist (so Day 2 is a true comparison):
-- Same `query_terms`, `max_docs`, `k`, and prompt style
-- Same eval question set
-- Same “answer format” (citations required)
+2) Lock your config (from `docs/roadside_geology_v0_mvp_spec.md`):
+- `sample_every_m`, `geosearch_radius_m`, `geosearch_limit`
+- `max_stops`, `min_stop_spacing_m`, `language`
 
-3) Decide your execution environment:
+3) Create a parity checklist (so Day 2 is a true comparison):
+- Same route polyline
+- Same sampling + GeoSearch params
+- Same stop-card JSON schema + citation rules
+- Same eval questions + judge rubric
+
+4) Decide your execution environment:
 - Vertex: local Jupyter **or** Vertex AI Workbench
 - Databricks: workspace + a cluster / serverless
 
 ---
 
-## Day 1 (Vertex AI): Build + Evaluate a Working Agent
+## Day 1 (Vertex AI): Build + Evaluate the Roadside Geology Agent
 
 ### 09:00–10:00 — GCP project + auth (P0)
 - Ensure Vertex AI API is enabled and pick a region (e.g., `us-central1`).
 - Decide auth approach:
   - **Vertex AI Workbench** (simplest), or
   - Local dev with `gcloud auth application-default login`
-- Confirm a “hello world” Gemini call works (`ChatVertexAI`).
+- Confirm a “hello world” Gemini call + embedding call works.
 
-**Deliverable:** you can run the LLM call cell in `docs/agentic_wikipedia_gcp_spec.md`.
+**Deliverable:** you can run the LLM + embedding sanity checks in `docs/agentic_wikipedia_gcp_spec.md`.
 
-### 10:00–11:30 — Data load + retrieval baseline (P0)
-- Run the Wikipedia loader with a tiny set (10–50 docs).
-- Build embeddings with `VertexAIEmbeddings("text-embedding-004")`.
-- Create FAISS index and validate `similarity_search()` returns relevant docs.
+### 10:00–11:30 — Route ingest + Wikipedia GeoSearch baseline (P0)
+- Ingest your test route (GPX/JSON) and compute cumulative distance.
+- Sample points (`sample_every_m`) and call Wikipedia GeoSearch around each sample point.
+- Fetch page summaries/extracts for top candidates and apply a basic geology filter.
 
-**Deliverable:** retrieval prints relevant snippets + metadata.
+**Deliverable:** you can print candidate geology pages per sampled point (with Wikipedia URLs).
 
-### 11:30–13:00 — Agentic workflow in LangGraph (P0)
-Implement a minimal agent loop:
-- Tool: `retrieve(query) -> top_k docs (content + metadata)`
-- Agent policy: “If question needs facts, retrieve; then answer with citations”
-- Output schema: `{answer, citations:[{title, source}]}` (or similar)
+### 11:30–13:00 — Retrieval + stop selection (P0)
+- Chunk Wikipedia extracts, embed with `VertexAIEmbeddings("text-embedding-004")`, and build a FAISS index.
+- Implement stop selection (dedupe + spacing + max stops).
+- Validate you can produce a deterministic shortlist of stop “seeds” (each with pageid/title/url + route_km).
 
-**Deliverable:** calling your graph on `example_question` retrieves + answers with citations.
+**Deliverable:** a stable shortlist of 5–12 stops for your route.
 
-### 14:00–15:30 — Add quality checks + an eval set (P0)
-- Create an eval set of ~10 questions for your topic.
-- Add a lightweight judge:
-  - Simple rubric (0–2): **relevance**, **factuality**, **citation quality**
-  - Optional: Gemini-as-judge (same model or a “judge” model)
-- Track:
-  - latency per query
-  - retrieval hit rate (did it retrieve something useful?)
+### 14:00–15:30 — Agentic workflow in LangGraph (P0)
+- Create tools: `geosearch`, `fetch_page`, `retrieve`, `write_stop_card`, `validate_stop_card`.
+- Implement LangGraph: route → candidates → stops → stop cards → validate → render outputs.
 
-**Deliverable:** a table/JSON of eval results with scores + notes.
+**Deliverable:** `guide.json` + `guide.md` generated; all citations are Wikipedia URLs.
 
-### 15:30–17:00 — “Prototype → Production” reflection (P0)
-Write your reflection (required by both specs):
+### 15:30–17:00 — Eval + “Prototype → Production” reflection (P0)
+- Create an eval set of ~10 questions about your route (e.g., “Which stop best shows volcanic features?”).
+- Add a lightweight judge + validators:
+  - Rubric (0–2): **usefulness**, **Wikipedia-grounded factuality**, **citation quality**
+  - Hard checks: citations exist + `wikipedia.org` only + schema validity
+- Do one improvement iteration (prompt/tool behavior) and re-run eval.
+
+**Deliverable:** eval scorecard + notes (what you’d change next).
+
+Write a short reflection:
 - What would you improve with more time?
 - What would it take to productionize? (security, monitoring, evals, feedback, cost controls)
-
-**Deliverable:** completed reflection section.
-
-### Stretch (if time): managed vector search or API (P1)
-- Replace FAISS with Vertex AI Vector Search, or
-- Wrap as a small API (FastAPI on Cloud Run) for shareable pre-prod feedback.
 
 ---
 
@@ -105,33 +108,33 @@ Day 2 mirrors Day 1, but you’ll align with the Databricks “developer workflo
   - a cluster / serverless compute
   - a Model Serving endpoint for an LLM (`ChatDatabricks`)
   - an embeddings endpoint (`DatabricksEmbeddings`)
-- Validate a “hello world” LLM call works.
+- Validate a “hello world” LLM + embedding call works.
 
 **Deliverable:** the LLM call cell runs in the Databricks environment.
 
-### 10:00–12:00 — Data + retrieval baseline (P0)
+### 10:00–12:00 — Route + retrieval parity (P0)
 Start with parity:
-- Same `query_terms`, `max_docs`, `k` as Day 1
-- Load Wikipedia docs
-- Build embeddings + FAISS index (fastest path)
+- Same route polyline + same sampling + GeoSearch params as Day 1
+- Same Wikipedia fetch + chunking logic
+- Same embeddings + FAISS index (fastest parity path)
 
 **Optional (preferred Databricks-style, P1):**
-- Store docs in Delta + create a Vector Search index
-- Use `VectorSearchRetrieverTool` instead of FAISS directly
+- Store fetched Wikipedia extracts/chunks in Delta + create a Vector Search index
+- Use `VectorSearchRetrieverTool` as the retriever tool
 
-**Deliverable:** `similarity_search()` (or Vector Search retriever) works and returns metadata.
+**Deliverable:** retrieval returns Wikipedia-backed chunks with metadata (title/url/pageid).
 
 ### 13:00–14:30 — Agentic workflow (LangGraph) (P0)
-- Recreate the same agentic policy from Day 1
-- Keep output schema identical to compare
+- Recreate the same graph (route → stops → stop cards → validate → render)
+- Keep output schema identical to Day 1 for comparison
 
-**Deliverable:** graph answers with citations, same as Day 1.
+**Deliverable:** `guide.json` + `guide.md` for the same route, comparable to Day 1 output.
 
 ### 14:30–16:00 — Trace/log + evaluation loop (P0)
 Align to the Databricks workflow:
 - Add tracing/logging for each run (inputs, retrieved docs, output, latency)
-- Run your same ~10-question eval set and produce a scorecard
-- Capture at least one improvement iteration (prompt/tool behavior) and re-run eval
+- Run the same eval set and produce a scorecard
+- Do one improvement iteration and re-run eval
 
 **Deliverable:** “before vs after” eval summary (even if small).
 
@@ -153,9 +156,9 @@ Create a short comparison:
 
 ## Quick “Gotchas” Checklist
 
-- Keep `max_docs` small while iterating; scale only after the loop is correct.
-- Always return citations; don’t trust the LLM without retrieval grounding.
+- Keep your test route short while iterating; scale route length only after the loop is correct.
+- Always return citations; don’t trust the LLM without Wikipedia grounding.
 - Separate “answer model” and “judge model” if you can (reduces bias).
-- Log retrieved doc IDs/URLs for debugging hallucinations.
+- Log retrieved page IDs/URLs + retrieved chunks to debug hallucinations.
 - Add timeouts/retries for API calls (especially in agent loops).
-
+- Don’t encourage collecting samples; keep guidance to observation/photography and respect local rules.
