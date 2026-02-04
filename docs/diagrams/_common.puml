@@ -1,0 +1,72 @@
+' Common style for Agentic Wikipedia PlantUML diagrams.
+' Keep this file self-contained (no remote includes) so rendering works offline.
+
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam roundcorner 12
+skinparam linetype ortho
+skinparam dpi 160
+
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #334155
+
+skinparam actor {
+  BackgroundColor #E0F2FE
+  BorderColor #0369A1
+  FontColor #0F172A
+}
+
+skinparam rectangle {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+skinparam component {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+skinparam database {
+  BackgroundColor #EEF2FF
+  BorderColor #3730A3
+  FontColor #0F172A
+}
+
+skinparam cloud {
+  BackgroundColor #ECFDF5
+  BorderColor #065F46
+  FontColor #0F172A
+}
+
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #B45309
+  FontColor #92400E
+}
+
+skinparam sequence {
+  LifeLineBorderColor #94A3B8
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #F8FAFC
+  ParticipantFontColor #0F172A
+}
+
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+skinparam class {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+

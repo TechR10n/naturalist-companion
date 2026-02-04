@@ -1,0 +1,64 @@
+@startuml 05_stopcard_contract
+!include _common.puml
+title Roadside Geology — Output Contract (Guide + StopCard)
+
+hide methods
+
+class Guide {
+  route: RouteMeta
+  generated_at: ISO-8601 timestamp
+  config: RunConfig
+  stops: StopCard[*]
+}
+
+class RouteMeta {
+  name: string (optional)
+  num_points: int
+  length_km: float
+}
+
+class RunConfig {
+  sample_every_m: int
+  geosearch_radius_m: int
+  geosearch_limit: int
+  max_stops: int
+  min_stop_spacing_m: int
+  language: string
+}
+
+class StopCard {
+  stop_id: string
+  route_km: float
+  center: LatLon
+  title: string
+  why_stop: string
+  what_to_look_for: string[*]
+  key_facts: string[*]
+  photo_prompts: string[*]
+  confidence: float (0..1)
+  citations: Citation[*]
+}
+
+class LatLon {
+  lat: float
+  lon: float
+}
+
+class Citation {
+  title: string
+  url: string (wikipedia.org)
+  pageid: int
+}
+
+Guide *-- RouteMeta
+Guide *-- RunConfig
+Guide *-- "5..12" StopCard
+StopCard *-- LatLon
+StopCard *-- "1..*" Citation
+
+note right of Citation
+v0 rule: citations are Wikipedia URLs only.\n(If insufficient sources: say so.)
+end note
+
+@enduml
+

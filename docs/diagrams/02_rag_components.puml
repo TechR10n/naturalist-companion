@@ -1,0 +1,42 @@
+@startuml 02_rag_components
+!include _common.puml
+title RAG Pipeline — Components (Ingest + Answer)
+
+left to right direction
+
+actor "User" as user
+cloud "Wikipedia API" as wiki
+
+package "Ingestion (offline / ahead-of-time)" as ingest {
+  component "WikipediaLoader\n(LangChain)" as loader
+  component "Chunker\n(~500–1,000 tokens)" as chunker
+  component "Embeddings\n(VertexAIEmbeddings)" as docEmbed
+  database "Vector store\n(Chroma / FAISS)" as store
+}
+
+package "Answering (runtime)" as answer {
+  component "Query embedding\n(VertexAIEmbeddings)" as qEmbed
+  component "Retriever\n(similarity_search k)" as retriever
+  component "Prompt builder\n(question + chunks + rules)" as prompt
+  component "LLM\n(ChatVertexAI / Gemini)" as llm
+  component "Validation + formatting\n(citations / schema)" as validate
+}
+
+loader --> wiki : fetch pages
+wiki --> loader : pages
+loader --> chunker : Document[]
+chunker --> docEmbed : chunks + metadata
+docEmbed --> store : vectors + metadata
+
+user --> retriever : question
+retriever --> qEmbed : embed_query(question)
+qEmbed --> retriever : query vector
+retriever --> store : similarity_search
+store --> retriever : top-k chunks\n(title, source URL, pageid)
+retriever --> prompt
+prompt --> llm
+llm --> validate
+validate --> user : answer + citations
+
+@enduml
+

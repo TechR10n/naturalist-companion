@@ -56,6 +56,8 @@ flowchart LR
   API --> Obs
 ```
 
+PlantUML version of the same diagram (handy for interview demos): `docs/diagrams/07_camera_vision_architecture.puml`
+
 ### Request/response shape (backend contract)
 
 Keep the API payloads boring and explicit. The “narration” is UI sugar; the structured output is the product.
@@ -129,4 +131,3 @@ Decide early what you keep:
    - force multimodal output into a predictable contract (see `docs/vision_prompt_schema.md`)
 4) Evaluation set:
    - collect ~50 labeled images (even coarse labels) to measure accuracy and calibration
-

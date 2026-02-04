@@ -1,0 +1,35 @@
+@startuml 03_question_answer_sequence
+!include _common.puml
+title Q&A (Grounded) — Sequence
+
+autonumber
+
+actor User
+participant "Notebook\n(agentic_wikipedia_gcp.ipynb)" as nb
+database "Vector store\n(Chroma / FAISS)" as vs
+participant "Embeddings\n(VertexAIEmbeddings)" as emb
+participant "LLM\n(ChatVertexAI / Gemini)" as llm
+participant "Wikipedia API" as wiki
+
+User -> nb : Ask question
+
+alt Index not built yet
+  nb -> wiki : Load Wikipedia pages\n(WIKIPEDIA_QUERY, WIKIPEDIA_MAX_DOCS)
+  wiki --> nb : pages + metadata
+  nb -> nb : Chunk pages + attach source URL
+  nb -> emb : Embed chunks
+  emb --> nb : vectors
+  nb -> vs : Upsert vectors + metadata
+end
+
+nb -> emb : Embed query(question)
+emb --> nb : query vector
+nb -> vs : similarity_search(query vector, k)
+vs --> nb : top-k chunks + metadata\n(title, source URL)
+nb -> llm : Prompt(question + chunks)\nRules: Wikipedia-only + cite sources
+llm --> nb : Draft answer
+nb -> nb : Validate citations + format
+nb --> User : Answer + citations
+
+@enduml
+

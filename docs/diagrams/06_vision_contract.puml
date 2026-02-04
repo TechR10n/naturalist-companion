@@ -1,0 +1,42 @@
+@startuml 06_vision_contract
+!include _common.puml
+title Camera Classification — Output Contract (Structured JSON)
+
+hide methods
+
+class VisionResult {
+  version: string
+  hypotheses: Hypothesis[*]
+  features: Feature[*]
+  follow_up: FollowUp
+  safety_notes: string[*]
+}
+
+class Hypothesis {
+  label: string
+  confidence: float (0..1)
+  why: string[*]
+  disambiguators: string[*]
+}
+
+class Feature {
+  label: string
+  confidence: float (0..1)
+  why: string[*]
+}
+
+class FollowUp {
+  questions: string[*]
+  photo_requests: string[*]
+}
+
+VisionResult *-- "*" Hypothesis
+VisionResult *-- "*" Feature
+VisionResult *-- FollowUp
+
+note right of VisionResult
+Keep narration separate from the contract.\nConfidence should be calibrated, not vibes.
+end note
+
+@enduml
+
