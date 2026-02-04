@@ -7,4 +7,3 @@ sentence-transformers
 langchain-huggingface
 langchain-chroma
 wikipedia
-faiss-cpu

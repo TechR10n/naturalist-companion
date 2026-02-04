@@ -1,4 +1,7 @@
 .idea/**/workspace.xml
+.DS_Store
+.AppleDouble
+.LSOverride
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
@@ -45,6 +48,10 @@ fabric.properties
 [Ss]cripts
 pyvenv.cfg
 .venv
+.chroma/
+.env
+.env.local
+.env.*.local
 pip-selfcheck.json
 *.rsuser
 *.suo

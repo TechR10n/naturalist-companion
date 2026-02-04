@@ -16,7 +16,8 @@ In the metadata of the LangChain document object; we have the following informat
 
 
 ```python
-%pip install -U -qqqq langchain-google-vertexai google-cloud-aiplatform langgraph==0.5.3 uv chromadb sentence-transformers langchain-huggingface langchain-chroma wikipedia faiss-cpu
+%pip install -U -qqqq langchain-google-vertexai google-cloud-aiplatform langgraph==0.5.3 uv chromadb sentence-transformers langchain-huggingface langchain-chroma wikipedia
+# Optional (FAISS): %pip install -U -qqqq faiss-cpu
 # You may need to restart the kernel
 ```
 
@@ -26,9 +27,7 @@ In the metadata of the LangChain document object; we have the following informat
  #######################################################################################################
 
 from langchain_community.document_loaders import WikipediaLoader
-import faiss
-from langchain_community.docstore.in_memory import InMemoryDocstore
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 
 from langchain_google_vertexai import (
     ChatVertexAI,
@@ -48,19 +47,19 @@ vertexai.init(project=PROJECT_ID, location=LOCATION)
  #######################################################################################################
 
 # DataLoader Config
-query_terms = ["sport", "football", "soccer", "basketball","baseball", "track","swimming", "gymnastics"] #TODO: update to match your use case requirements
+query_terms = ["Interstate 81", "Shenandoah Valley", "Roanoke", "Appalachian Mountains"] #TODO: update to match your use case requirements
 max_docs = 10 #TODO: recommend starting with a smaller number for testing purposes
 
 # Retriever Config
 k = 2 # number of documents to return
-EMBEDDING_MODEL = "text-embedding-004" # Vertex AI Embedding model
+EMBEDDING_MODEL = "text-embedding-005" # Vertex AI Embedding model
 
 
 # LLM Config
-LLM_MODEL_NAME = "gemini-1.5-flash-001" # Vertex AI Gemini model
+LLM_MODEL_NAME = "gemini-flash-latest" # Vertex AI Gemini model
 
 
-example_question = "What is the most popular sport in the US?"
+example_question = "What states does Interstate 81 run through?"
 
 ```
 
@@ -70,18 +69,26 @@ example_question = "What is the most popular sport in the US?"
  ###### Wikipedia Data Loader                                                                     ######
  #######################################################################################################
 
-docs = WikipediaLoader(query=query_terms, load_max_docs=max_docs).load() # Load in documents from Wikipedia takes about 10 minutes for 1K articles
+wiki_query = " OR ".join(query_terms)
+docs = WikipediaLoader(query=wiki_query, load_max_docs=max_docs).load() # Load in documents from Wikipedia takes about 10 minutes for 1K articles
 
 #######################################################################################################
-###### FAISS Retriever: Using Vertex AI embedding model                                          ###### #######################################################################################################
+###### Vector Store Retriever: Using Vertex AI embedding model                                   ######
+#######################################################################################################
 
-# Define the embeddings and the FAISS vector store
+# Define the embeddings and the vector store
 embeddings = VertexAIEmbeddings(model_name=EMBEDDING_MODEL) # Use to generate embeddings
-vector_store = FAISS.from_documents(docs, embeddings)
+
+# Default: Chroma (easy local setup)
+vector_store = Chroma.from_documents(docs, embeddings, collection_name="agentic-wikipedia")
+
+# Optional: FAISS (if you installed `faiss-cpu`)
+# from langchain_community.vectorstores import FAISS
+# vector_store = FAISS.from_documents(docs, embeddings)
  
 # Example of how to invoke the vector store
 results = vector_store.similarity_search(
-    "What is the most popular sport in the US?",
+    example_question,
     k=k
 )
 for res in results:
@@ -92,7 +99,7 @@ for res in results:
 
 llm = ChatVertexAI(model_name=LLM_MODEL_NAME)
 
-response = llm.invoke("What is the most popular sport in the US?")
+response = llm.invoke(example_question)
 
 print("\n",response.content)
 ```
