@@ -1,0 +1,50 @@
+@startuml 03_future_databricks_architecture
+!include _common.puml
+title Agentic Wikipedia — Future Databricks Architecture
+
+actor "User" as user
+
+node "Local baseline (minimum)" as baseline {
+  rectangle "Notebook\nagentic_wikipedia_gcp.ipynb" as gcpnb
+  database "Local vector store\n(Chroma / FAISS)" as local_vs
+}
+
+cloud "Wikipedia API" as wiki
+
+cloud "Databricks (future)" as dbx {
+  rectangle "Databricks Notebook\n(ported workflow)" as dbx_nb
+  rectangle "Jobs / Workflows\n(ingest + refresh)" as jobs
+  rectangle "Model Serving\n(LLM + embeddings)" as serving
+  database "Vector Search\n(Delta / Unity Catalog)" as vs
+  rectangle "MLflow\n(experiments + eval)" as mlflow
+  rectangle "API layer\n(optional)" as api
+}
+
+user --> gcpnb : run baseline
+
+' Baseline path (current minimum)
+gcpnb --> wiki : load pages
+wiki --> gcpnb : pages + metadata
+gcpnb <--> local_vs : upsert + similarity_search
+gcpnb --> user : answer + citations
+
+' Future Databricks path
+jobs --> wiki : harvest / refresh
+wiki --> jobs : pages + metadata
+jobs --> serving : embed docs
+serving --> vs : vectors + metadata
+
+user --> api : ask question
+api --> serving : embed query + generate
+api <--> vs : retrieve top-k chunks
+api --> user : answer + citations
+
+dbx_nb --> serving : dev / debug
+dbx_nb <--> vs : explore + test
+dbx_nb --> mlflow : log runs / evals
+
+note right of gcpnb
+Minimum baseline remains:\n`agentic_wikipedia_gcp.ipynb`
+end note
+
+@enduml

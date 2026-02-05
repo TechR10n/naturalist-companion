@@ -1,3 +1,5 @@
+"""Offline LangGraph MVP for the roadside geology workflow."""
+
 from __future__ import annotations
 
 import json
@@ -9,10 +11,12 @@ from typing import Any, Callable, Literal, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from agentic_wikipedia import mvp_data
+from anc.agentic_wikipedia import mvp_data
 
 
 class RoutePoint(TypedDict):
+    """Route point along the path with cumulative distance metadata."""
+
     i: int
     lat: float
     lon: float
@@ -20,6 +24,8 @@ class RoutePoint(TypedDict):
 
 
 class WikiCandidate(TypedDict):
+    """Candidate Wikipedia page near a sampled route point."""
+
     pageid: int
     title: str
     lat: float
@@ -29,6 +35,8 @@ class WikiCandidate(TypedDict):
 
 
 class WikiPage(TypedDict):
+    """Fetched Wikipedia page payload used by the MVP graph."""
+
     pageid: int
     title: str
     url: str
@@ -40,6 +48,8 @@ class WikiPage(TypedDict):
 
 
 class Chunk(TypedDict):
+    """Text chunk with source metadata used for retrieval."""
+
     text: str
     pageid: int
     title: str
@@ -48,6 +58,8 @@ class Chunk(TypedDict):
 
 
 class StopSeed(TypedDict):
+    """Seed metadata for a candidate stop card."""
+
     stop_id: str
     pageid: int
     title: str
@@ -57,6 +69,8 @@ class StopSeed(TypedDict):
 
 
 class StopCard(TypedDict):
+    """Structured stop card produced by the MVP."""
+
     stop_id: str
     route_km: float
     center: dict[str, float]
@@ -70,6 +84,8 @@ class StopCard(TypedDict):
 
 
 class Guide(TypedDict):
+    """Guide output for a route with generated stop cards."""
+
     route: dict[str, Any]
     generated_at: str
     config: dict[str, Any]
@@ -77,6 +93,8 @@ class Guide(TypedDict):
 
 
 class MVPConfig(TypedDict):
+    """Configuration options for the offline MVP."""
+
     sample_every_m: int
     geosearch_radius_m: int
     geosearch_limit: int
@@ -86,6 +104,8 @@ class MVPConfig(TypedDict):
 
 
 class GraphState(TypedDict, total=False):
+    """Shared state container passed between LangGraph nodes."""
+
     trace: list[str]
     config: MVPConfig
     route_name: str
@@ -117,6 +137,8 @@ FetchPageFn = Callable[[int, str], dict[str, Any]]
 
 @dataclass(frozen=True)
 class Tools:
+    """Callable hooks for geosearch and page fetching."""
+
     geosearch: GeosearchFn
     fetch_page: FetchPageFn
 
@@ -514,6 +536,7 @@ def _render_outputs(state: GraphState) -> GraphState:
 
 
 def build_mvp_app(tools: Tools | None = None):
+    """Build the offline MVP LangGraph app."""
     tools = tools or offline_tools()
 
     graph: StateGraph = StateGraph(GraphState)
@@ -551,6 +574,7 @@ def build_mvp_app(tools: Tools | None = None):
 
 
 def offline_tools() -> Tools:
+    """Return offline-only tool implementations for the MVP."""
     pages = mvp_data.minimal_wiki_pages()
     # Return different candidates for early vs late route points so the per-stop
     # loop runs more than once in the MVP.
@@ -592,6 +616,7 @@ def run_mvp(
     route_name: str = "mvp_route",
     out_dir: str | Path | None = None,
 ) -> GraphState:
+    """Execute the offline MVP graph and return the resulting state."""
     cfg = config or _default_config()
     app = build_mvp_app()
     state: GraphState = {"config": cfg, "route_name": route_name}

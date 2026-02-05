@@ -1,3 +1,5 @@
+"""Smoke tests for the offline LangGraph MVP."""
+
 from __future__ import annotations
 
 import unittest
@@ -7,6 +9,8 @@ from anc.mvp import build_mvp_app
 
 
 class TestLangGraphMVPSmoke(unittest.TestCase):
+    """Smoke tests for the offline LangGraph MVP graph."""
+
     def test_smoke_executes_all_nodes(self) -> None:
         app = build_mvp_app()
         result = app.invoke(

@@ -1,0 +1,35 @@
+@startuml 02_gcp_architecture
+!include _common.puml
+title Agentic Wikipedia — GCP / Vertex AI Architecture (Current)
+
+actor "User" as user
+
+node "Local dev (macOS / Linux)" as local {
+  rectangle "Notebook\nagentic_wikipedia_gcp.ipynb" as notebook
+  rectangle "RAG pipeline\n(chunk + retrieve + prompt)" as rag
+  database "Vector store\n(Chroma / FAISS)" as vs
+}
+
+cloud "Wikipedia API" as wiki
+cloud "Vertex AI" as vertex {
+  rectangle "Embeddings\n(VertexAIEmbeddings)" as emb
+  rectangle "LLM\n(Gemini via ChatVertexAI)" as llm
+}
+
+user --> notebook : run cells / ask question
+notebook --> wiki : load pages
+wiki --> notebook : pages + metadata
+notebook --> rag : chunk + attach metadata
+rag --> emb : embed docs + query
+emb --> rag : vectors
+rag <--> vs : upsert + similarity_search
+rag --> llm : prompt(question + chunks)\n+ grounding rules
+llm --> rag : answer text
+rag --> notebook : validate + format
+notebook --> user : answer + citations
+
+note right of notebook
+Auth: gcloud ADC\nConfig: .env
+end note
+
+@enduml

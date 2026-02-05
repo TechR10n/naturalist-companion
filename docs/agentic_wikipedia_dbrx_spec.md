@@ -1,123 +1,61 @@
-# Agentic Wikipedia Proof-of-Concept
+# Agentic Wikipedia — Databricks Spec (Future)
 
-## Data Source
+## Status
 
-The Wikipedia Loader ingests documents from the Wikipedia API and converts them into LangChain document objects. The page content includes the first sections of the Wikipedia articles and the metadata is described in detail below.
+**Future / roadmap.** This spec defines the Databricks migration target while keeping the current GCP notebook path functional.
 
-__Recommendation__: If you are using the LangChain document loader we recommend filtering down to 10k or fewer documents. The `query_terms` argument below can be updated to update the search term used to search wikipedia. Make sure you update this based on the use case you defined.
+## Minimum baseline (must remain)
 
-In the metadata of the LangChain document object; we have the following information:
+The following must continue to run as the baseline reference:
 
-| Column  | Definition                                                                 |
-|---------|-----------------------------------------------------------------------------|
-| title   | The Wikipedia page title (e.g., "Quantum Computing").                       |
-| summary | A short extract or condensed description from the page content.             |
-| source  | The URL link to the original Wikipedia article.                             |
+- `notebooks/agentic_wikipedia_gcp.ipynb`
 
+This notebook is the minimum viable path for Wikipedia-grounded Q&A and acts as the parity harness for Databricks work.
 
-```python
-%pip install -U -qqqq backoff databricks-langchain langgraph==0.5.3 uv databricks-agents mlflow-skinny[databricks] chromadb sentence-transformers langchain-huggingface langchain-chroma wikipedia faiss-cpu
-dbutils.library.restartPython()
-```
+## Target architecture (Databricks)
 
-    [43mNote: you may need to restart the kernel using %restart_python or dbutils.library.restartPython() to use updated packages.[0m
+- Workspace notebooks for development and debugging.
+- Jobs / Workflows for scheduled ingestion and refresh.
+- Model Serving for LLM + embeddings endpoints.
+- Vector Search backed by Delta tables in Unity Catalog.
+- MLflow for experiments and evaluation runs.
+- Optional API layer for productization.
 
+See diagram: `docs/diagrams/03_future_databricks_architecture.puml`.
 
+## Phased plan
 
-```python
- #######################################################################################################
- ###### Python Package Imports for this notebook                                                  ######
- #######################################################################################################
+### Phase 0 — Parity harness (now)
 
-from langchain.document_loaders import WikipediaLoader
-import faiss
-from langchain_community.docstore.in_memory import InMemoryDocstore
-from langchain_community.vectorstores import FAISS
-# from langchain.embeddings import DatabricksEmbeddings
+- Keep `agentic_wikipedia_gcp.ipynb` as the canonical baseline.
+- Normalize chunking, metadata, and citation rules so outputs are comparable across stacks.
 
-from databricks_langchain import (
-    ChatDatabricks,
-    DatabricksEmbeddings,
-    UCFunctionToolkit,
-    VectorSearchRetrieverTool,
-)
+### Phase 1 — Databricks notebook port
 
- 
- #######################################################################################################
- ###### Config (Define LLMs, Embeddings, Vector Store, Data Loader specs)                         ######
- #######################################################################################################
+- Port the workflow to a Databricks notebook using `databricks-langchain`, `ChatDatabricks`, and `DatabricksEmbeddings`.
+- Use **FAISS or Chroma** first to keep the port simple.
+- Validate output parity with the baseline notebook (same questions, same slice).
 
-# DataLoader Config
-query_terms = ["sport", "football", "soccer", "basketball","baseball", "track","swimming", "gymnastics"] #TODO: update to match your use case requirements
-max_docs = 10 #TODO: recommend starting with a smaller number for testing purposes
+### Phase 2 — Vector Search + Model Serving
 
-# Retriever Config
-k = 2 # number of documents to return
-EMBEDDING_MODEL = "databricks-bge-large-en" # Embedding model endpoint name
+- Move embeddings and LLM calls to **Model Serving**.
+- Persist vectors in **Databricks Vector Search**.
+- Schedule Wikipedia refresh via **Jobs / Workflows**.
+- Log evaluations and retrieval metrics in **MLflow**.
 
+### Phase 3 — Optional API layer
 
-# LLM Config
-LLM_ENDPOINT_NAME = "databricks-meta-llama-3-1-8b-instruct" # Model Serving endpoint name; other option see "Serving" under AI/ML tab (e.g. databricks-gpt-oss-20b)
+- Add a thin API layer for app use-cases.
+- Keep the API response schema identical to the baseline outputs.
 
+## Guardrails (non-negotiable)
 
-example_question = "What is the most popular sport in the US?"
+- Wikipedia-only sourcing for factual claims.
+- Citations must be `*.wikipedia.org/wiki/...`.
+- If sources are insufficient, explicitly say so.
 
-```
+## Deliverables
 
-
-```python
- #######################################################################################################
- ###### Wikipedia Data Loader                                                                     ######
- #######################################################################################################
-
-docs = WikipediaLoader(query=query_terms, load_max_docs=max_docs).load() # Load in documents from Wikipedia takes about 10 minutes for 1K articles
-
-#######################################################################################################
-###### FAISS Retriever: Using DBX embedding model                                                ###### #######################################################################################################
-
-# Define the embeddings and the FAISS vector store
-embeddings = DatabricksEmbeddings(endpoint=EMBEDDING_MODEL) # Use to generate embeddings
-vector_store = FAISS.from_documents(docs, embeddings)
- 
-# Example of how to invoke the vector store
-results = vector_store.similarity_search(
-    "What is the most popular sport in the US?",
-    k=k
-)
-for res in results:
-    print(f"* {res.page_content} [{res.metadata}]")
-
-#######################################################################################################
-###### LLM: Using DBX Foundation Model                                                           ###### #######################################################################################################
-
-llm = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
-
-response = llm.invoke("What is the most popular sport in the US?")
-
-print("\n",response.content)
-```
----
-    * The USA Gymnastics National Championships is the annual artistic gymnastics national competition held in the United States for elite-level competition. It is currently organized by USA Gymnastics, the governing body for gymnastics in the United States. The national championships have been held since 1963.
----
-
-### a) GenAI Application Development
-
-__REQUIRED__: This section is where input your custom logic to create and run your agentic workflow. Feel free to add as many codes cells that are needed for this assignment
-
-
-```python
-#TODO: Enter your Agentic workflow code here
-```
-
-### b) Reflection
-
-__REQUIRED:__ Provide a detailed reflection addressing  these two questions:
-1. If you had more time, which specific improvements or enhancements would you make to your agentic workflow, and why?
-2. What concrete steps are required to move this workflow from prototype to production?
-
-
-> Enter your reflection here
-
-
-
-### 
+- A Databricks notebook path that matches baseline outputs.
+- A Vector Search-backed retrieval path with the same citation rules.
+- MLflow runs for regression and evaluation tracking.

@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Unit Tests" type="PythonConfigurationType" factoryName="Python">
+    <module name="agentic-wikipedia" />
+    <option name="MODULE_MODE" value="true" />
+    <option name="MODULE_NAME" value="unittest" />
+    <option name="PARAMETERS" value="discover -s tests -p test_*.py" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="ENV_VARIABLES">
+      <map>
+        <entry key="PYTHONPATH" value="$PROJECT_DIR$/src" />
+      </map>
+    </option>
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <method v="2" />
+  </configuration>
+</component>

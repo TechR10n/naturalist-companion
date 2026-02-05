@@ -1,3 +1,5 @@
+"""Toy Wikipedia and route data for the offline MVP."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -92,4 +94,3 @@ def minimal_geosearch_index() -> list[dict[str, Any]]:
             "dist_m": 9100,
         },
     ]
-

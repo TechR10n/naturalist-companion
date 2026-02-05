@@ -1,3 +1,5 @@
+"""Smoke tests for the Flask web app."""
+
 from __future__ import annotations
 
 import unittest
@@ -6,6 +8,8 @@ from anc.web import create_app
 
 
 class TestWebAppSmoke(unittest.TestCase):
+    """Smoke tests for the Flask app endpoints."""
+
     def test_healthz(self) -> None:
         app = create_app()
         client = app.test_client()
@@ -26,4 +30,3 @@ class TestWebAppSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

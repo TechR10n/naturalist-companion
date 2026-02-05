@@ -1,3 +1,5 @@
+"""Flask web app entrypoints for Agentic Naturalist Companion."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,6 +12,7 @@ from anc.mvp import run_mvp
 
 
 def create_app() -> Flask:
+    """Create the Flask application instance."""
     app = Flask(__name__)
 
     @app.get("/")
@@ -39,6 +42,7 @@ def create_app() -> Flask:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the Flask development server."""
     parser = argparse.ArgumentParser(description="Agentic Naturalist Companion (Flask)")
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
@@ -56,4 +60,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

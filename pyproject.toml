@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naturalist-companion"
+version = "0.1.0"
+description = "Agentic Naturalist Companion"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "langchain-google-vertexai",
+  "google-cloud-aiplatform",
+  "langgraph==0.5.3",
+  "uv",
+  "flask",
+  "chromadb",
+  "sentence-transformers",
+  "langchain-huggingface",
+  "langchain-chroma",
+  "wikipedia",
+]
+
+[project.optional-dependencies]
+dev = [
+  "jupyterlab",
+  "ipykernel",
+  "python-dotenv",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+anc = ["templates/*.html", "static/*.css"]

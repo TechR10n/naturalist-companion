@@ -1,126 +1,83 @@
-# Agentic Wikipedia Proof-of-Concept (Vertex AI Edition)
+# Agentic Wikipedia — GCP / Vertex AI Spec (Current)
 
-## Data Source
+## Vision (current)
 
-The Wikipedia Loader ingests documents from the Wikipedia API and converts them into LangChain document objects. The page content includes the first sections of the Wikipedia articles and the metadata is described in detail below.
+We are building a **Wikipedia-grounded, citation-first RAG pipeline** that can run in three modes:
 
-__Recommendation__: If you are using the LangChain document loader we recommend filtering down to 10k or fewer documents. The `query_terms` argument below can be updated to update the search term used to search wikipedia. Make sure you update this based on the use case you defined.
+- **Local-only** for fast iteration (no cloud credentials required).
+- **GCP / Vertex AI** for higher-quality embeddings and LLM responses (current primary path).
+- **Databricks** for future migration (see `docs/agentic_wikipedia_dbrx_spec.md`).
 
-In the metadata of the LangChain document object; we have the following information:
+This document describes the **current GCP path** and its near-term plan.
 
-| Column  | Definition                                                                 |
-|---------|-----------------------------------------------------------------------------|
-| title   | The Wikipedia page title (e.g., "Quantum Computing").                       |
-| summary | A short extract or condensed description from the page content.             |
-| source  | The URL link to the original Wikipedia article.                             |
+## Architecture summary
 
+- **Entry point**: `notebooks/agentic_wikipedia_gcp.ipynb`.
+- **Source of truth**: Wikipedia API only.
+- **Embeddings + LLM**: Vertex AI (`VertexAIEmbeddings`, `ChatVertexAI`).
+- **Vector store**: local Chroma (default) or FAISS (optional).
+- **Output**: answers with **Wikipedia-only citations**.
 
-```python
-%pip install -U -qqqq langchain-google-vertexai google-cloud-aiplatform langgraph==0.5.3 uv chromadb sentence-transformers langchain-huggingface langchain-chroma wikipedia
-# Optional (FAISS): %pip install -U -qqqq faiss-cpu
-# You may need to restart the kernel
-```
+See diagrams:
+- `docs/diagrams/01_local_architecture.puml`
+- `docs/diagrams/02_gcp_architecture.puml`
 
-```python
- #######################################################################################################
- ###### Python Package Imports for this notebook                                                  ######
- #######################################################################################################
+## Data source and metadata
 
-from langchain_community.document_loaders import WikipediaLoader
-from langchain_chroma import Chroma
+The Wikipedia loader returns LangChain `Document` objects with:
 
-from langchain_google_vertexai import (
-    ChatVertexAI,
-    VertexAIEmbeddings,
-)
-import vertexai
+- `title`: Wikipedia page title
+- `summary`: short extract
+- `source`: canonical Wikipedia URL
 
-# Initialize Vertex AI
-# TODO: Replace with your Project ID and Location
-PROJECT_ID = "your-project-id"
-LOCATION = "us-central1"
-vertexai.init(project=PROJECT_ID, location=LOCATION)
+These fields must survive chunking and retrieval so citations can be traced.
 
- 
- #######################################################################################################
- ###### Config (Define LLMs, Embeddings, Vector Store, Data Loader specs)                         ######
- #######################################################################################################
+## Workflow (GCP path)
 
-# DataLoader Config
-query_terms = ["Interstate 81", "Shenandoah Valley", "Roanoke", "Appalachian Mountains"] #TODO: update to match your use case requirements
-max_docs = 10 #TODO: recommend starting with a smaller number for testing purposes
+1. **Ingest**: query Wikipedia, load a constrained slice of pages.
+2. **Chunk**: split pages into ~500–1,000 token chunks and attach metadata.
+3. **Embed**: use Vertex AI embeddings for chunks and queries.
+4. **Store**: upsert vectors into a local vector store (Chroma/FAISS).
+5. **Retrieve**: similarity search for top-k chunks.
+6. **Generate**: call Vertex AI Gemini via `ChatVertexAI` with grounding rules.
+7. **Validate**: ensure Wikipedia-only citations and schema compliance.
 
-# Retriever Config
-k = 2 # number of documents to return
-EMBEDDING_MODEL = "text-embedding-005" # Vertex AI Embedding model
+## Configuration
 
+Environment variables in `.env` (see `.env.example`):
 
-# LLM Config
-LLM_MODEL_NAME = "gemini-flash-latest" # Vertex AI Gemini model
+- `GOOGLE_CLOUD_PROJECT`
+- `GOOGLE_CLOUD_LOCATION`
+- `VERTEX_LLM_MODEL`
+- `VERTEX_EMBEDDING_MODEL`
+- `WIKIPEDIA_QUERY`
+- `WIKIPEDIA_MAX_DOCS`
+- `WIKIPEDIA_TOP_K`
+- `VECTORSTORE` (`chroma` or `faiss`)
+- `CHROMA_PERSIST_DIR`
 
+Authentication:
+- Preferred: `gcloud auth application-default login`
+- Optional: `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json`
 
-example_question = "What states does Interstate 81 run through?"
+## Dependencies (minimal set)
 
-```
+- `langchain-google-vertexai`
+- `google-cloud-aiplatform`
+- `langchain` + `langgraph`
+- `chromadb` (default vector store)
+- `faiss-cpu` (optional)
+- `wikipedia` (loader)
+- `sentence-transformers` (local-only mode)
 
+## Success criteria (GCP path)
 
-```python
- #######################################################################################################
- ###### Wikipedia Data Loader                                                                     ######
- #######################################################################################################
+- Answers are **grounded in retrieved Wikipedia text**.
+- Every factual claim has a **Wikipedia URL citation**.
+- The notebook completes end-to-end with a small slice (e.g., 5–10 pages).
 
-wiki_query = " OR ".join(query_terms)
-docs = WikipediaLoader(query=wiki_query, load_max_docs=max_docs).load() # Load in documents from Wikipedia takes about 10 minutes for 1K articles
+## Near-term plan (GCP)
 
-#######################################################################################################
-###### Vector Store Retriever: Using Vertex AI embedding model                                   ######
-#######################################################################################################
-
-# Define the embeddings and the vector store
-embeddings = VertexAIEmbeddings(model_name=EMBEDDING_MODEL) # Use to generate embeddings
-
-# Default: Chroma (easy local setup)
-vector_store = Chroma.from_documents(docs, embeddings, collection_name="agentic-wikipedia")
-
-# Optional: FAISS (if you installed `faiss-cpu`)
-# from langchain_community.vectorstores import FAISS
-# vector_store = FAISS.from_documents(docs, embeddings)
- 
-# Example of how to invoke the vector store
-results = vector_store.similarity_search(
-    example_question,
-    k=k
-)
-for res in results:
-    print(f"* {res.page_content} [{res.metadata}]")
-
-#######################################################################################################
-###### LLM: Using Vertex AI Foundation Model                                                     ###### #######################################################################################################
-
-llm = ChatVertexAI(model_name=LLM_MODEL_NAME)
-
-response = llm.invoke(example_question)
-
-print("\n",response.content)
-```
----
-    * The USA Gymnastics National Championships is the annual artistic gymnastics national competition held in the United States for elite-level competition. It is currently organized by USA Gymnastics, the governing body for gymnastics in the United States. The national championships have been held since 1963.
----
-
-### a) GenAI Application Development
-
-__REQUIRED__: This section is where input your custom logic to create and run your agentic workflow. Feel free to add as many codes cells that are needed for this assignment
-
-
-```python
-#TODO: Enter your Agentic workflow code here
-```
-
-### b) Reflection
-
-__REQUIRED:__ Provide a detailed reflection addressing  these two questions:
-1. If you had more time, which specific improvements or enhancements would you make to your agentic workflow, and why?
-2. What concrete steps are required to move this workflow from prototype to production?
-
-
-> Enter your reflection here
+1. Keep the notebook path stable and reproducible.
+2. Tighten chunking + citation validation.
+3. Optional: move vector storage to a managed service only when necessary.
