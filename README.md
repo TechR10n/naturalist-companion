@@ -36,6 +36,14 @@ Provider profiles:
 - `make smoke`
 - `make check` (runs both)
 
+PyCharm shortcut:
+- Use shared run configurations:
+  - `Task: setup`
+  - `Task: test`
+  - `Task: smoke`
+  - `Task: clean`
+- These call `scripts/dev_tasks.py`, which delegates to the same `make` targets used in CLI/CI.
+
 3) Run the web app:
 - `make web`
 - Open `http://127.0.0.1:8000`

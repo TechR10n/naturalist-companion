@@ -50,6 +50,24 @@ class TestWebAppSmoke(unittest.TestCase):
         guide = payload["guide"]
         self.assertIn("stops", guide)
 
+    def test_mvp_partial_config_merges_defaults(self) -> None:
+        app = create_app()
+        client = app.test_client()
+        resp = client.post(
+            "/api/mvp",
+            json={
+                "route_name": "unit_test_partial_config",
+                "config": {"max_stops": 1},
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.get_json() or {}
+        guide = payload.get("guide") or {}
+        cfg = guide.get("config") or {}
+        self.assertEqual(cfg.get("max_stops"), 1)
+        self.assertIn("sample_every_m", cfg)
+        self.assertIn("geosearch_radius_m", cfg)
+
     def test_mvp_string_false_does_not_enable_live_wikipedia(self) -> None:
         app = create_app()
         client = app.test_client()

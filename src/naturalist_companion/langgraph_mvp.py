@@ -172,6 +172,32 @@ def _default_config() -> MVPConfig:
     }
 
 
+def _merge_config(overrides: MVPConfig | None) -> MVPConfig:
+    """Merge optional runtime overrides onto defaults with basic coercion."""
+    cfg = _default_config()
+    if not overrides:
+        return cfg
+
+    for key in cfg.keys():
+        if key not in overrides:
+            continue
+        raw = overrides[key]
+        if key == "language":
+            value = str(raw or "").strip()
+            if value:
+                cfg[key] = value  # type: ignore[typeddict-item]
+            continue
+
+        try:
+            value = int(raw)  # type: ignore[arg-type]
+        except Exception:
+            continue
+        if value > 0:
+            cfg[key] = value  # type: ignore[typeddict-item]
+
+    return cfg
+
+
 def _ingest_route(state: GraphState) -> GraphState:
     route_points = state.get("route_points") or mvp_data.minimal_route_points()
     if len(route_points) < 2:
@@ -620,7 +646,7 @@ def run_mvp(
     tools: Tools | None = None,
 ) -> GraphState:
     """Execute the offline MVP graph and return the resulting state."""
-    cfg = config or _default_config()
+    cfg = _merge_config(config)
     app = build_mvp_app(tools=tools)
     state: GraphState = {"config": cfg, "route_name": route_name}
     if route_points is not None:

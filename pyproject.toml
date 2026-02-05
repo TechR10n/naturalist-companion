@@ -19,6 +19,7 @@ dependencies = [
 dev = [
   "jupyterlab",
   "ipykernel",
+  "ipywidgets",
 ]
 ollama = [
   "langchain==0.3.27",
