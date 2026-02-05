@@ -2,6 +2,9 @@
 
 This folder contains product direction, specs, and reference materials for the current and next phases.
 
+Developer workflow reference:
+- `next_steps.md` - step-by-step `uv` + `Makefile` + PyCharm + CI usage
+
 ## Product
 
 - `docs/PRD.md` - full roadmap and requirements

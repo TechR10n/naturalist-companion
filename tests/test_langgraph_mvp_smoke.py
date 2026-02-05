@@ -56,6 +56,27 @@ class TestLangGraphMVPSmoke(unittest.TestCase):
             for c in citations:
                 self.assertIn("wikipedia.org/wiki/", c.get("url", ""))
 
+    def test_sampling_includes_route_endpoint(self) -> None:
+        app = build_mvp_app()
+        result = app.invoke(
+            {
+                "config": {
+                    "sample_every_m": 10_000,
+                    "geosearch_radius_m": 15_000,
+                    "geosearch_limit": 20,
+                    "max_stops": 5,
+                    "min_stop_spacing_m": 15_000,
+                    "language": "en",
+                },
+                "route_name": "unit_test_route_endpoint",
+            }
+        )
+
+        route = result["route"]
+        samples = result["sample_points"]
+        self.assertTrue(samples, "expected non-empty sampled route points")
+        self.assertEqual(samples[-1]["i"], route[-1]["i"], "expected endpoint to be sampled")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Web App (anc)" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/anc/web.py" />
+  <configuration default="false" name="Web App" type="PythonConfigurationType" factoryName="Python">
+    <module name="naturalist-companion" />
+    <option name="MODULE_MODE" value="true" />
+    <option name="MODULE_NAME" value="naturalist_companion" />
     <option name="PARAMETERS" value="--debug" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="ENV_VARIABLES">

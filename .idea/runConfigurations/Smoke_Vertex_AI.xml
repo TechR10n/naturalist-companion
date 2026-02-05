@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Smoke: Vertex AI" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
+    <module name="naturalist-companion" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/smoke_vertex_ai.py" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="ENV_VARIABLES">

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Smoke: Local RAG (Toy Data)" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
+    <module name="naturalist-companion" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/smoke_local_rag.py" />
     <option name="PARAMETERS" value="--toy-data" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

@@ -1,147 +1,119 @@
 # Next steps
 
-Run these steps from the repo root to see the project working. Pick either:
-- **Offline demo** (fastest, no GCP / no API calls), or
-- **Vertex AI demo** (full flow, requires a GCP project; makes billable calls).
+This is the canonical walkthrough for local dev, PyCharm, and CI.
 
-## 0) Prereqs
+## 1) Local environment (uv)
 
-- Python **3.12** available as `python3.12` (recommended on macOS).
-- For the **Vertex AI** path: a GCP project with billing enabled + the `gcloud` CLI.
-
-## 1) Create a venv + install dependencies
+From repo root:
 
 ```bash
-cp .env.example .env
+uv --version
+make setup
+```
+
+What this does:
+- Uses Python 3.12 and syncs `.venv` from `pyproject.toml` + `uv.lock`.
+- Installs base + `dev` extras.
+
+Provider-specific variants:
+
+```bash
+make setup-gcp
+make setup-ollama
+make setup-dbrx
+```
+
+## 2) Core local checks (Makefile)
+
+Run tests:
+
+```bash
+make test
+```
+
+Run offline smoke:
+
+```bash
+make smoke
+```
+
+Run both (same gate used by CI):
+
+```bash
+make check
+```
+
+Run app:
+
+```bash
+make web
+```
+
+Clean local outputs/caches:
+
+```bash
+make clean
+```
+
+Refresh lockfile (after dependency changes):
+
+```bash
+make lock
+```
+
+## 3) Optional smoke tools
+
+Local RAG smoke using toy data:
+
+```bash
+make smoke-rag
+```
+
+Vertex import smoke (no billable calls):
+
+```bash
+make smoke-vertex
+```
+
+## 4) PyCharm setup and run configurations
+
+1. Set interpreter to `./.venv/bin/python`.
+2. Use shared run configs in `.idea/runConfigurations/`:
+- `Web App`
+- `Unit Tests`
+- `Smoke: LangGraph MVP`
+- `Smoke: Local RAG (Toy Data)`
+- `Smoke: Local RAG (Ollama)`
+- `Smoke: Live Wikipedia (Ollama)`
+- `Smoke: Vertex AI`
+- `Render: LangGraph MVP (Mermaid)`
+3. Recommended: in each run config, add a **Before Launch** external tool or shell step:
+- `make setup` (or profile-specific setup target)
+
+## 5) CI (GitHub Actions)
+
+CI file: `.github/workflows/ci.yml`
+
+Current CI gate runs on Python 3.12:
+
+```bash
+make test
+make smoke
+```
+
+using:
+
+```bash
+uv sync --frozen --python 3.12 --extra dev
+```
+
+## 6) Legacy bootstrap path (still available)
+
+If you prefer the existing shell bootstrap:
+
+```bash
 ./scripts/bootstrap_vertex.sh
 source .venv/bin/activate
-python --version
 ```
 
-Install the dependency profile for the target you are running:
-
-```bash
-# Vertex/GCP notebooks + scripts
-python -m pip install -r requirements-gcp-dev.txt
-
-# Ollama notebook path
-python -m pip install -r requirements-ollama-dev.txt
-
-# Databricks notebook path
-python -m pip install -r requirements-dbrx-dev.txt
-```
-
-If `./scripts/bootstrap_vertex.sh` can’t find `python3.12`, rerun it with a different interpreter:
-
-```bash
-PYTHON_BIN=python3 ./scripts/bootstrap_vertex.sh
-```
-
-Each profile already includes FAISS + local RAG dependencies.
-
-## 2) Fastest demo: Offline LangGraph MVP (no GCP / no API calls)
-
-Run the offline smoke test (writes output files):
-
-```bash
-source .venv/bin/activate
-python scripts/smoke_langgraph_mvp.py
-```
-
-You should see `LangGraph MVP smoke run` and it should write:
-- `out/mvp/guide.md`
-- `out/mvp/guide.json`
-
-Open the generated guide:
-
-```bash
-sed -n '1,200p' out/mvp/guide.md
-```
-
-Optional: run without writing files (just prints a summary):
-
-```bash
-python scripts/smoke_langgraph_mvp.py --no-write
-```
-
-Optional: run unit tests:
-
-```bash
-python -m unittest discover -s tests -p 'test_*.py'
-```
-
-## 2.5) Local RAG smoke test (SentenceTransformers + Chroma; optional Ollama answer step)
-
-This runs a “real” local RAG loop (embeddings + vector store + retrieval) without GCP/Databricks.
-
-Note: the first run will download the embedding model weights (internet required). Wikipedia loading also requires internet unless you use `--toy-data`.
-
-```bash
-source .venv/bin/activate
-python scripts/smoke_local_rag.py
-```
-
-Optional: run fully offline using the repo’s tiny toy dataset:
-
-```bash
-python scripts/smoke_local_rag.py --toy-data
-```
-
-Optional: generate an answer with a local Ollama model (requires Ollama installed + running):
-
-```bash
-python scripts/smoke_local_rag.py --ollama --ollama-model llama3.2:3b
-```
-
-## 3) Full demo: Vertex AI + Wikipedia notebook (billable)
-
-### 3.1 Configure `.env`
-
-Edit `.env` and set at least:
-- `GOOGLE_CLOUD_PROJECT=your-gcp-project-id`
-- `GOOGLE_CLOUD_LOCATION=us-central1` (or your preferred region)
-
-If you want a quick/cheap first run, also set:
-- `WIKIPEDIA_MAX_DOCS=5`
-- keep `WIKIPEDIA_QUERY` tight
-
-### 3.2 Authenticate (ADC)
-
-```bash
-gcloud auth application-default login
-```
-
-### 3.3 Enable Vertex AI API (one-time per project)
-
-```bash
-gcloud config set project your-gcp-project-id
-gcloud services enable aiplatform.googleapis.com
-```
-
-### 3.4 Smoke test Vertex AI wiring
-
-Imports only (no billable calls):
-
-```bash
-source .venv/bin/activate
-python scripts/smoke_vertex_ai.py
-```
-
-Tiny live checks (billable calls to embeddings + LLM):
-
-```bash
-python scripts/smoke_vertex_ai.py --api
-```
-
-You should see:
-- `embeddings: ok (dim=...)`
-- `llm: ok (response='ok')`
-
-### 3.5 Run the notebook
-
-```bash
-source .venv/bin/activate
-jupyter lab
-```
-
-Open `notebooks/anc_gcp.ipynb` and **Run All Cells**.
+Then run the same make targets.

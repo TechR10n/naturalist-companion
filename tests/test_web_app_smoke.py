@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
 from naturalist_companion.web import create_app
 
@@ -48,6 +49,32 @@ class TestWebAppSmoke(unittest.TestCase):
         self.assertIsInstance(payload.get("route_points"), list)
         guide = payload["guide"]
         self.assertIn("stops", guide)
+
+    def test_mvp_string_false_does_not_enable_live_wikipedia(self) -> None:
+        app = create_app()
+        client = app.test_client()
+        with mock.patch(
+            "naturalist_companion.wikipedia_tools.wikipedia_tools",
+            side_effect=AssertionError("wikipedia_tools should not be called"),
+        ):
+            resp = client.post(
+                "/api/mvp",
+                json={"route_name": "unit_test_web", "live_wikipedia": "false"},
+            )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_tour_string_false_does_not_enable_live_wikipedia(self) -> None:
+        app = create_app()
+        client = app.test_client()
+        with mock.patch(
+            "naturalist_companion.wikipedia_tools.wikipedia_tools",
+            side_effect=AssertionError("wikipedia_tools should not be called"),
+        ):
+            resp = client.post(
+                "/api/tour",
+                json={"route_name": "unit_test_tour", "live_wikipedia": "false"},
+            )
+        self.assertEqual(resp.status_code, 200)
 
 
 if __name__ == "__main__":

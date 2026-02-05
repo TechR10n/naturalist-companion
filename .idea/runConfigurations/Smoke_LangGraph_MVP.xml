@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Smoke: LangGraph MVP" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
+    <module name="naturalist-companion" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/smoke_langgraph_mvp.py" />
     <option name="PARAMETERS" value="--no-write" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

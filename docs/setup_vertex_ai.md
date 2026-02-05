@@ -13,8 +13,7 @@ This setup enables the GCP path for `notebooks/anc_gcp.ipynb`.
 1. Create and activate a venv
 
 ```bash
-./scripts/bootstrap_vertex.sh
-source .venv/bin/activate
+make setup-gcp
 ```
 
 2. Configure `.env`
@@ -47,3 +46,12 @@ jupyter lab
 ```
 
 Open `notebooks/anc_gcp.ipynb` and run all cells.
+
+## Optional legacy bootstrap
+
+If you prefer the previous shell bootstrap path:
+
+```bash
+./scripts/bootstrap_vertex.sh
+source .venv/bin/activate
+```

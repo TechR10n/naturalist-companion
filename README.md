@@ -5,7 +5,7 @@ Agentic Naturalist is a companion team of data + storytelling: intellectual sher
 Python package (import) name: `naturalist_companion`.
 
 Project layout (code):
-- `src/`: all runtime code (web app + offline MVP graph) plus `templates/` and `static/`.
+- `src/naturalist_companion/`: all runtime code (web app + offline MVP graph) plus `templates/` and `static/`.
 - `scripts/`: runnable scenarios / smoke tests.
 - `tests/`: unit + smoke tests.
 
@@ -20,31 +20,40 @@ Start here: `docs/PRD.md`
 
 Wireframes for early MVP flows: `docs/wireframes.md`
 
-## Quickstart (Flask, offline)
+## Quickstart (recommended: uv + Makefile)
 
-1) Set up Python + deps (recommended Python **3.12**):
+1) Set up the local environment (recommended Python **3.12**):
+- `make setup`
+- This creates/syncs `.venv` via `uv` with base + dev dependencies.
+
+Provider profiles:
+- Vertex/GCP: `make setup-gcp`
+- Ollama/local: `make setup-ollama`
+- Databricks/DBRX: `make setup-dbrx`
+
+2) Run checks:
+- `make test`
+- `make smoke`
+- `make check` (runs both)
+
+3) Run the web app:
+- `make web`
+- Open `http://127.0.0.1:8000`
+- Camera path: `POST /api/vision` accepts multipart `images` or JSON `images[].data_base64`.
+
+Optional: refresh lockfile:
+- `make lock`
+
+Legacy bootstrap path is still available:
 - `./scripts/bootstrap_vertex.sh`
-- `source .venv/bin/activate`
-- `python -m pip install -e .`
-
-Dependency profiles (choose one notebook/provider target):
-- GCP/Vertex: `python -m pip install -r requirements-gcp-dev.txt`
-- Ollama/local: `python -m pip install -r requirements-ollama-dev.txt`
-- Databricks/DBRX: `python -m pip install -r requirements-dbrx-dev.txt`
-- Each profile includes the same local RAG stack (`sentence-transformers` + `chromadb` + `langchain-chroma` + `langchain-huggingface`).
-
-2) Run the web app:
-- `python -m naturalist_companion --debug`
-- Open `http://127.0.0.1:8000` (the page can generate a tiny offline guide via `POST /api/mvp`).
-- Camera path: `POST /api/vision` accepts image uploads (multipart `images`) or base64 JSON (`images[].data_base64`).
 
 ## Offline LangGraph MVP (minimal data)
 
 This repo includes a tiny **offline** LangGraph MVP (no API calls) to validate graph wiring and smoke-test all nodes.
 
-- Run the MVP: `python scripts/smoke_langgraph_mvp.py`
-- Run without writing files: `python scripts/smoke_langgraph_mvp.py --no-write`
-- Run the smoke test: `python -m unittest discover -s tests -p 'test_*.py'`
+- Run the MVP: `uv run python scripts/smoke_langgraph_mvp.py`
+- Run without writing files: `make smoke`
+- Run unit tests: `make test`
 
 ## ANC notebooks (optional)
 

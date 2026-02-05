@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Render: LangGraph MVP (Mermaid)" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
+    <module name="naturalist-companion" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/render_langgraph_mvp_mermaid.py" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="ENV_VARIABLES">

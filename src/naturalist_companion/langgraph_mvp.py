@@ -211,7 +211,9 @@ def _sample_points(state: GraphState) -> GraphState:
     sample_points: list[RoutePoint] = []
     j = 0
     for t in targets:
-        while j + 1 < len(route) and route[j + 1]["cum_dist_m"] < t:
+        # Use <= so exact target distances snap to the matching route point
+        # (including the final endpoint).
+        while j + 1 < len(route) and route[j + 1]["cum_dist_m"] <= t:
             j += 1
         sample_points.append(route[j])
 

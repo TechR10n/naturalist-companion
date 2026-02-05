@@ -182,7 +182,7 @@ def create_app() -> Flask:
 
         route_points = payload.get("route_points")
         config = payload.get("config")
-        live_wikipedia = bool(payload.get("live_wikipedia"))
+        live_wikipedia = _as_bool(payload.get("live_wikipedia"))
 
         tools = None
         if live_wikipedia:
@@ -216,7 +216,7 @@ def create_app() -> Flask:
 
         route_points = payload.get("route_points")
         config = payload.get("config")
-        live_wikipedia = bool(payload.get("live_wikipedia"))
+        live_wikipedia = _as_bool(payload.get("live_wikipedia"))
 
         tools = None
         if live_wikipedia:

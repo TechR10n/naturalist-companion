@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Unit Tests" type="PythonConfigurationType" factoryName="Python">
-    <module name="agentic-wikipedia" />
+    <module name="naturalist-companion" />
     <option name="MODULE_MODE" value="true" />
     <option name="MODULE_NAME" value="unittest" />
     <option name="PARAMETERS" value="discover -s tests -p test_*.py" />
