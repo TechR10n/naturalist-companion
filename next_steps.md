@@ -62,6 +62,29 @@ Optional: run unit tests:
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
+## 2.5) Local RAG smoke test (SentenceTransformers + Chroma; optional Ollama)
+
+This runs a “real” local RAG loop (embeddings + vector store + retrieval) without GCP/Databricks.
+
+Note: the first run will download the embedding model weights (internet required). Wikipedia loading also requires internet unless you use `--toy-data`.
+
+```bash
+source .venv/bin/activate
+python scripts/smoke_local_rag.py
+```
+
+Optional: run fully offline using the repo’s tiny toy dataset:
+
+```bash
+python scripts/smoke_local_rag.py --toy-data
+```
+
+Optional: generate an answer with a local Ollama model (requires Ollama installed + running):
+
+```bash
+python scripts/smoke_local_rag.py --ollama --ollama-model llama3.2:3b
+```
+
 ## 3) Full demo: Vertex AI + Wikipedia notebook (billable)
 
 ### 3.1 Configure `.env`
@@ -114,4 +137,3 @@ jupyter lab
 ```
 
 Open `notebooks/agentic_wikipedia_gcp.ipynb` and **Run All Cells**.
-

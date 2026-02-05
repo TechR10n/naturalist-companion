@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime
 
-from agentic_wikipedia.langgraph_mvp import build_mvp_app
+from anc.mvp import build_mvp_app
 
 
 class TestLangGraphMVPSmoke(unittest.TestCase):
@@ -55,4 +55,3 @@ class TestLangGraphMVPSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

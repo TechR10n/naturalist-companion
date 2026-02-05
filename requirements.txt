@@ -2,6 +2,7 @@ langchain-google-vertexai
 google-cloud-aiplatform
 langgraph==0.5.3
 uv
+flask
 chromadb
 sentence-transformers
 langchain-huggingface

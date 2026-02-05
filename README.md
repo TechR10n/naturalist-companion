@@ -1,22 +1,18 @@
-# Agentic Wikipedia (Vertex AI POC)
+# Agentic Naturalist Companion (`naturalist-companion`)
 
-Think of this repo as a small roadside exhibit: we pull a handful of Wikipedia pages on a narrow topic, press them into embeddings on Vertex AI, stash them in a local vector store, and ask questions that can be traced back to the pages we picked up along the way.
+Agentic Naturalist is a companion team of data + storytelling: intellectual sherpas and logisticians for field learning and route-based exploration.
 
-## Quickstart (macOS, local Jupyter)
+Short Python package name: `anc` (Agentic Naturalist Companion).
 
-### Mile 0: Pack the toolkit
+## Quickstart (Flask, offline)
 
 1) Set up Python + deps (recommended Python **3.12**):
-- `cp .env.example .env` and fill in `GOOGLE_CLOUD_PROJECT` (and optionally `GOOGLE_CLOUD_LOCATION`)
 - `./scripts/bootstrap_vertex.sh`
-  - Optional (FAISS): `python -m pip install -r requirements-faiss.txt`
-
-2) Get your GCP “day pass” (one-time):
-- `gcloud auth application-default login`
-
-3) Roll out:
 - `source .venv/bin/activate`
-- `jupyter lab` → open `notebooks/agentic_wikipedia_gcp.ipynb`
+
+2) Run the web app:
+- `python -m anc --debug`
+- Open `http://127.0.0.1:8000` (the page can generate a tiny offline guide via `POST /api/mvp`).
 
 ## Narrow starter use-case
 
@@ -31,6 +27,19 @@ This repo includes a tiny **offline** LangGraph MVP (no API calls) to validate g
 - Run the MVP: `python scripts/smoke_langgraph_mvp.py`
 - Run without writing files: `python scripts/smoke_langgraph_mvp.py --no-write`
 - Run the smoke test: `python -m unittest discover -s tests -p 'test_*.py'`
+
+## Vertex AI notebook (optional)
+
+If you want the original “Agentic Wikipedia” Vertex AI wiring (Wikipedia slice → embeddings → local vector store → grounded Q&A):
+
+1) Configure:
+- `cp .env.example .env` and fill in `GOOGLE_CLOUD_PROJECT` (and optionally `GOOGLE_CLOUD_LOCATION`)
+
+2) Auth once:
+- `gcloud auth application-default login`
+
+3) Run:
+- `jupyter lab` → open `notebooks/agentic_wikipedia_gcp.ipynb`
 
 ## Camera + geology (future direction)
 
