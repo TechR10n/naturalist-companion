@@ -1,0 +1,4 @@
+-r requirements.txt
+-r requirements-target-common.txt
+langchain-google-vertexai==2.1.2
+google-cloud-aiplatform==1.136.0

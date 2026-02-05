@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime
 
-from anc.mvp import build_mvp_app
+from naturalist_companion.mvp import build_mvp_app
 
 
 class TestLangGraphMVPSmoke(unittest.TestCase):

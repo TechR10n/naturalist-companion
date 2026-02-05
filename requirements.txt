@@ -1,10 +1,4 @@
-langchain-google-vertexai
-google-cloud-aiplatform
+flask==3.1.2
 langgraph==0.5.3
-uv
-flask
-chromadb
-sentence-transformers
-langchain-huggingface
-langchain-chroma
-wikipedia
+python-dotenv==1.2.1
+wikipedia==1.4.0

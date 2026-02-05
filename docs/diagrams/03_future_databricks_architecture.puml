@@ -1,11 +1,11 @@
 @startuml 03_future_databricks_architecture
 !include _common.puml
-title Agentic Wikipedia — Future Databricks Architecture
+title ANC — Future Databricks Architecture
 
 actor "User" as user
 
 node "Local baseline (minimum)" as baseline {
-  rectangle "Notebook\nagentic_wikipedia_gcp.ipynb" as gcpnb
+  rectangle "Notebook\nanc_gcp.ipynb" as gcpnb
   database "Local vector store\n(Chroma / FAISS)" as local_vs
 }
 
@@ -44,7 +44,7 @@ dbx_nb <--> vs : explore + test
 dbx_nb --> mlflow : log runs / evals
 
 note right of gcpnb
-Minimum baseline remains:\n`agentic_wikipedia_gcp.ipynb`
+Minimum baseline remains:\n`anc_gcp.ipynb`
 end note
 
 @enduml

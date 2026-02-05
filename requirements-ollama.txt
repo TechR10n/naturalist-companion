@@ -1,0 +1,3 @@
+-r requirements.txt
+-r requirements-target-common.txt
+langchain-ollama==0.3.10

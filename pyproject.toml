@@ -9,31 +9,59 @@ description = "Agentic Naturalist Companion"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "langchain-google-vertexai",
-  "google-cloud-aiplatform",
+  "flask==3.1.2",
   "langgraph==0.5.3",
-  "uv",
-  "flask",
-  "chromadb",
-  "sentence-transformers",
-  "langchain-huggingface",
-  "langchain-chroma",
-  "wikipedia",
+  "python-dotenv==1.2.1",
+  "wikipedia==1.4.0",
 ]
 
 [project.optional-dependencies]
 dev = [
   "jupyterlab",
   "ipykernel",
-  "python-dotenv",
+]
+ollama = [
+  "langchain==0.3.27",
+  "langchain-core==0.3.83",
+  "langchain-community==0.3.31",
+  "faiss-cpu==1.13.2",
+  "chromadb==1.4.1",
+  "langchain-chroma==0.2.6",
+  "langchain-huggingface==0.3.1",
+  "sentence-transformers==5.2.2",
+  "langchain-ollama==0.3.10",
+]
+gcp = [
+  "langchain==0.3.27",
+  "langchain-core==0.3.83",
+  "langchain-community==0.3.31",
+  "faiss-cpu==1.13.2",
+  "chromadb==1.4.1",
+  "langchain-chroma==0.2.6",
+  "langchain-huggingface==0.3.1",
+  "sentence-transformers==5.2.2",
+  "langchain-google-vertexai==2.1.2",
+  "google-cloud-aiplatform==1.136.0",
+]
+dbrx = [
+  "langchain==0.3.27",
+  "langchain-core==0.3.83",
+  "langchain-community==0.3.31",
+  "faiss-cpu==1.13.2",
+  "chromadb==1.4.1",
+  "langchain-chroma==0.2.6",
+  "langchain-huggingface==0.3.1",
+  "sentence-transformers==5.2.2",
+  "backoff==2.2.1",
+  "databricks-langchain",
+  "databricks-agents",
+  "mlflow-skinny[databricks]",
 ]
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+packages = ["naturalist_companion"]
+package-dir = {naturalist_companion = "src"}
 include-package-data = true
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.setuptools.package-data]
-anc = ["templates/*.html", "static/*.css"]
+naturalist_companion = ["templates/*.html", "static/*.css"]

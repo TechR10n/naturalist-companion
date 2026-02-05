@@ -7,6 +7,7 @@ These diagrams are focused on the **current delivery path**: local iteration, Ve
 1. `01_local_architecture.puml` — local-only RAG loop (fast iteration, no cloud)
 2. `02_gcp_architecture.puml` — current GCP/Vertex AI path (notebook + local vector store)
 3. `03_future_databricks_architecture.puml` — future Databricks target, with baseline notebook retained
+4. `04_langgraph_mvp_flow.puml` — minimal LangGraph node flow (offline baseline)
 
 ## Render locally
 

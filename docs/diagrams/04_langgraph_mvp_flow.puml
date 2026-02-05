@@ -1,0 +1,29 @@
+@startuml 04_langgraph_mvp_flow
+!include _common.puml
+title ANC — Offline LangGraph MVP Flow
+
+start
+:ingest_route;
+:sample_points;
+:discover_candidates;
+:fetch_and_filter_pages;
+:select_stops;
+:build_index;
+:retrieve;
+:write_stop_card;
+:validate_stop_card;
+
+if (done?) then (continue)
+  :accumulate_and_advance;
+  :retrieve;
+  :write_stop_card;
+  :validate_stop_card;
+  :accumulate_and_advance;
+else (done)
+  :accumulate_and_advance;
+endif
+
+:render_outputs;
+stop
+
+@enduml

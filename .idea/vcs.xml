@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../HungerSync" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../PyBacklogger" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../PyDocDeck" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../SlideDocGen" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../VirtueOS" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../ZZ_mementropy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../_zmementropy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../af2lf" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../airbridge" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../anf-paper" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../anf-paper-quarto" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../awaf-arxiv" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../cv" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../data-analysis-monsur" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-anf-profiler" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-gov-engine" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-labs-app" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-sage-profiler" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-sage-profiler/dbrx-sage-profiler" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-system-tables" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-waf" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../dbrx-waf-profiler" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../flax" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../fomc-agent" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../gemini-cli-scratch" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../js-cookbook" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../js-essentials" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../media-helpers" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../mementropy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../pgnut" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../prof-ratings" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../prompt-engineering-workbench" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../react-microblog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../romeo" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../slef" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../slef/reveal.js" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../tinderbox-cookbook" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../ts-recipe-book" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../x_archive_hungersync" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../zeppelin" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../zeppelin/notebooks" vcs="Git" />
+  </component>
+</project>

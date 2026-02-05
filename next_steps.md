@@ -18,18 +18,26 @@ source .venv/bin/activate
 python --version
 ```
 
+Install the dependency profile for the target you are running:
+
+```bash
+# Vertex/GCP notebooks + scripts
+python -m pip install -r requirements-gcp-dev.txt
+
+# Ollama notebook path
+python -m pip install -r requirements-ollama-dev.txt
+
+# Databricks notebook path
+python -m pip install -r requirements-dbrx-dev.txt
+```
+
 If `./scripts/bootstrap_vertex.sh` can’t find `python3.12`, rerun it with a different interpreter:
 
 ```bash
 PYTHON_BIN=python3 ./scripts/bootstrap_vertex.sh
 ```
 
-Optional (FAISS vector store support):
-
-```bash
-source .venv/bin/activate
-python -m pip install -r requirements-faiss.txt
-```
+Each profile already includes FAISS + local RAG dependencies.
 
 ## 2) Fastest demo: Offline LangGraph MVP (no GCP / no API calls)
 
@@ -62,7 +70,7 @@ Optional: run unit tests:
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-## 2.5) Local RAG smoke test (SentenceTransformers + Chroma; optional Ollama)
+## 2.5) Local RAG smoke test (SentenceTransformers + Chroma; optional Ollama answer step)
 
 This runs a “real” local RAG loop (embeddings + vector store + retrieval) without GCP/Databricks.
 
@@ -136,4 +144,4 @@ source .venv/bin/activate
 jupyter lab
 ```
 
-Open `notebooks/agentic_wikipedia_gcp.ipynb` and **Run All Cells**.
+Open `notebooks/anc_gcp.ipynb` and **Run All Cells**.

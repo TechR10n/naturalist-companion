@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Web App (anc)" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="Smoke: Live Wikipedia (Ollama)" type="PythonConfigurationType" factoryName="Python">
     <module name="agentic-wikipedia" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/anc/web.py" />
-    <option name="PARAMETERS" value="--debug" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/smoke_local_rag.py" />
+    <option name="PARAMETERS" value="--ollama --ollama-model llama3.2:3b --max-docs 5 --top-k 5 --question &quot;Which states does Interstate 81 pass through?&quot; --prefer-wikipedia-package --min-interval-s 1.5 --request-budget 20" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="ENV_VARIABLES">
       <map>

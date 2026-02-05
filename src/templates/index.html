@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ brand_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>{{ brand_name }}</h1>
+        <p class="tagline">{{ tagline }}</p>
+      </header>
+
+      <section class="card">
+        <h2>Self-guided tour (map)</h2>
+        <p>
+          View a sample route on an interactive map, see geology stops, and read a narrative for the tour.
+        </p>
+        <a class="btn" href="/tour">Open tour map</a>
+      </section>
+
+      <section class="card">
+        <h2>Offline MVP demo</h2>
+        <p>
+          Generates a tiny route-based guide using toy Wikipedia-like data (no API calls).
+        </p>
+        <div class="row">
+          <label>
+            Route name
+            <input id="routeName" value="web_demo" />
+          </label>
+          <label>
+            View
+            <select id="viewMode">
+              <option value="markdown" selected>Guide (Markdown)</option>
+              <option value="json">Raw JSON</option>
+            </select>
+          </label>
+          <button id="runBtn" type="button">Generate sample guide</button>
+        </div>
+
+        <pre id="output" class="output" aria-live="polite"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Camera classify (Ollama-ready)</h2>
+        <p>
+          Upload one or more photos for a structured camera result contract. Uses deterministic local stub
+          output by default, with optional Ollama vision if enabled.
+        </p>
+        <div class="row">
+          <label>
+            Domain
+            <select id="visionDomain">
+              <option value="geology" selected>Geology</option>
+              <option value="flora">Flora</option>
+              <option value="fauna">Fauna</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label>
+            Provider
+            <select id="visionProvider">
+              <option value="stub" selected>Stub only</option>
+              <option value="ollama">Try Ollama</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Pictures
+          <input id="visionImages" type="file" accept="image/*" multiple />
+        </label>
+
+        <label>
+          Note (optional)
+          <textarea
+            id="visionNote"
+            class="textarea"
+            rows="3"
+            spellcheck="false"
+            placeholder="Ex: wide shot + close-up from same outcrop"
+          ></textarea>
+        </label>
+
+        <div class="row">
+          <button id="visionBtn" type="button">Analyze pictures</button>
+        </div>
+        <pre id="visionOutput" class="output" aria-live="polite"></pre>
+      </section>
+
+      <footer class="footer">
+        <span>Tip: use `POST /api/mvp` for routes and `POST /api/vision` for camera JSON.</span>
+      </footer>
+    </main>
+
+    <script>
+      const runBtn = document.getElementById("runBtn");
+      const routeName = document.getElementById("routeName");
+      const viewMode = document.getElementById("viewMode");
+      const output = document.getElementById("output");
+      const visionBtn = document.getElementById("visionBtn");
+      const visionDomain = document.getElementById("visionDomain");
+      const visionProvider = document.getElementById("visionProvider");
+      const visionImages = document.getElementById("visionImages");
+      const visionNote = document.getElementById("visionNote");
+      const visionOutput = document.getElementById("visionOutput");
+
+      async function runMvp() {
+        output.textContent = "Running…";
+        runBtn.disabled = true;
+        try {
+          const resp = await fetch("/api/mvp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ route_name: routeName.value || "web_demo" }),
+          });
+          const data = await resp.json();
+          if ((viewMode.value || "markdown") === "json") {
+            output.textContent = JSON.stringify(data, null, 2);
+          } else {
+            output.textContent = data.guide_markdown || "(no guide markdown returned)";
+          }
+        } catch (e) {
+          output.textContent = String(e);
+        } finally {
+          runBtn.disabled = false;
+        }
+      }
+
+      runBtn.addEventListener("click", runMvp);
+
+      async function runVision() {
+        const files = Array.from(visionImages.files || []);
+        if (files.length === 0) {
+          visionOutput.textContent = "Select at least one image first.";
+          return;
+        }
+
+        visionOutput.textContent = "Running image analysis…";
+        visionBtn.disabled = true;
+        try {
+          const form = new FormData();
+          for (const file of files) {
+            form.append("images", file, file.name || "upload.jpg");
+          }
+          form.append("domain", visionDomain.value || "geology");
+          form.append("note", visionNote.value || "");
+          form.append("use_ollama", visionProvider.value === "ollama" ? "true" : "false");
+
+          const resp = await fetch("/api/vision", {
+            method: "POST",
+            body: form,
+          });
+          const text = await resp.text();
+          let data = {};
+          try {
+            data = JSON.parse(text);
+          } catch (_err) {
+            throw new Error(`HTTP ${resp.status}: ${text}`);
+          }
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${JSON.stringify(data)}`);
+          }
+          visionOutput.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+          visionOutput.textContent = String(e);
+        } finally {
+          visionBtn.disabled = false;
+        }
+      }
+
+      visionBtn.addEventListener("click", runVision);
+    </script>
+  </body>
+</html>

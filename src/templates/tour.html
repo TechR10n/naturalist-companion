@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }} · {{ brand_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+  </head>
+  <body>
+    <main class="container container--wide">
+      <header class="hero hero--compact">
+        <div class="topnav">
+          <a class="topnav__link" href="/">← Home</a>
+        </div>
+        <h1>{{ title }}</h1>
+        <p class="tagline">
+          A route map with geology stops and a narrative for a self-guided tour. Uses the offline MVP by
+          default.
+        </p>
+      </header>
+
+      <section class="tourGrid">
+        <div class="card">
+          <div class="row">
+            <label>
+              Route name
+              <input id="routeName" value="web_tour" />
+            </label>
+            <label>
+              View
+              <select id="viewMode">
+                <option value="story" selected>Story</option>
+                <option value="guide">Stop cards (Markdown)</option>
+                <option value="json">Raw JSON</option>
+              </select>
+            </label>
+            <button id="loadBtn" type="button">Load tour</button>
+          </div>
+
+          <details class="details">
+            <summary>Optional: custom route points</summary>
+            <p class="details__hint">
+              Paste a JSON array of points (<code>{"lat": 38.1, "lon": -79.0}</code> or <code>[lat, lon]</code>)
+              or a GeoJSON LineString Feature. Leave blank to use the built-in sample route.
+            </p>
+            <textarea
+              id="routePoints"
+              class="textarea"
+              rows="6"
+              spellcheck="false"
+              placeholder='[{"lat": 38.1496, "lon": -79.0717}, {"lat": 38.4596, "lon": -78.8717}]'
+            ></textarea>
+          </details>
+
+          <div id="map" class="map" role="application" aria-label="Route map"></div>
+          <p id="mapStatus" class="muted small"></p>
+        </div>
+
+        <div class="card">
+          <h2>Tour</h2>
+          <div id="output" class="story" aria-live="polite"></div>
+
+          <h2 class="mt">Stops</h2>
+          <div id="stops" class="stops"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+      const loadBtn = document.getElementById("loadBtn");
+      const routeName = document.getElementById("routeName");
+      const viewMode = document.getElementById("viewMode");
+      const routePoints = document.getElementById("routePoints");
+      const output = document.getElementById("output");
+      const stopsEl = document.getElementById("stops");
+      const mapStatus = document.getElementById("mapStatus");
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function parseRoutePoints(text) {
+        const raw = String(text || "").trim();
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+
+        // GeoJSON Feature(LineString) or LineString.
+        const geom = data && data.type === "Feature" ? data.geometry : data;
+        if (geom && geom.type === "LineString" && Array.isArray(geom.coordinates)) {
+          return geom.coordinates
+            .filter((c) => Array.isArray(c) && c.length >= 2)
+            .map((c) => ({ lat: Number(c[1]), lon: Number(c[0]) }));
+        }
+
+        if (!Array.isArray(data)) {
+          throw new Error("Route points must be an array, or a GeoJSON LineString Feature.");
+        }
+
+        if (data.length === 0) return [];
+
+        if (Array.isArray(data[0])) {
+          return data
+            .filter((c) => Array.isArray(c) && c.length >= 2)
+            .map((c) => ({ lat: Number(c[0]), lon: Number(c[1]) }));
+        }
+
+        return data.map((p) => ({ lat: Number(p.lat), lon: Number(p.lon) }));
+      }
+
+      let map = null;
+      let baseLayer = null;
+      let routeLayer = null;
+      let stopsLayer = null;
+      const markersByStopId = new Map();
+
+      function ensureMap() {
+        if (map) return map;
+        if (typeof L === "undefined") {
+          mapStatus.textContent = "Map unavailable (Leaflet failed to load). Story + stops still work.";
+          return null;
+        }
+
+        map = L.map("map", { zoomControl: true });
+        baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        });
+        baseLayer.addTo(map);
+        map.setView([38.46, -78.88], 8);
+        return map;
+      }
+
+      function clearLayers() {
+        markersByStopId.clear();
+        if (!map) return;
+        if (routeLayer) {
+          routeLayer.remove();
+          routeLayer = null;
+        }
+        if (stopsLayer) {
+          stopsLayer.remove();
+          stopsLayer = null;
+        }
+      }
+
+      function renderStopsList(stops) {
+        stopsEl.innerHTML = "";
+        if (!Array.isArray(stops) || stops.length === 0) {
+          stopsEl.textContent = "(No stops)";
+          return;
+        }
+
+        for (const stop of stops) {
+          const stopId = String(stop.stop_id || "");
+          const title = String(stop.title || "");
+          const routeKm = stop.route_km;
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "stopBtn";
+          btn.textContent = `${stopId} · ${title} (km ${Number(routeKm).toFixed(1)})`;
+          btn.addEventListener("click", () => {
+            const marker = markersByStopId.get(stopId);
+            if (marker) {
+              marker.openPopup();
+              if (map) map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.6 });
+            }
+          });
+          stopsEl.appendChild(btn);
+        }
+      }
+
+      function renderMap(data) {
+        const m = ensureMap();
+        if (!m) return;
+        clearLayers();
+
+        if (data.route_geojson) {
+          routeLayer = L.geoJSON(data.route_geojson, {
+            style: { color: "#7c3aed", weight: 4, opacity: 0.9 },
+          }).addTo(m);
+        }
+
+        if (data.stops_geojson) {
+          stopsLayer = L.geoJSON(data.stops_geojson, {
+            pointToLayer: (feature, latlng) =>
+              L.circleMarker(latlng, {
+                radius: 7,
+                weight: 2,
+                color: "rgba(255,255,255,0.9)",
+                fillColor: "#f59e0b",
+                fillOpacity: 0.9,
+              }),
+            onEachFeature: (feature, layer) => {
+              const p = (feature && feature.properties) || {};
+              const stopId = String(p.stop_id || "");
+              const title = String(p.title || "Stop");
+              const why = String(p.why_stop || "");
+              const routeKm = p.route_km;
+              const html = [
+                `<strong>${escapeHtml(stopId)}: ${escapeHtml(title)}</strong>`,
+                `<div class="popupMeta">km ${Number(routeKm).toFixed(1)}</div>`,
+                why ? `<div class="popupWhy">${escapeHtml(why)}</div>` : "",
+              ]
+                .filter(Boolean)
+                .join("");
+              layer.bindPopup(html, { maxWidth: 320 });
+              if (stopId) markersByStopId.set(stopId, layer);
+            },
+          }).addTo(m);
+        }
+
+        const layers = [];
+        if (routeLayer) layers.push(routeLayer);
+        if (stopsLayer) layers.push(stopsLayer);
+        if (layers.length > 0) {
+          const group = L.featureGroup(layers);
+          const bounds = group.getBounds();
+          if (bounds.isValid()) m.fitBounds(bounds.pad(0.12));
+        }
+
+        mapStatus.textContent = "";
+      }
+
+      function renderOutput(data) {
+        const mode = String(viewMode.value || "story");
+        if (mode === "json") {
+          output.textContent = JSON.stringify(data, null, 2);
+          output.classList.add("story--mono");
+          return;
+        }
+
+        output.classList.remove("story--mono");
+        if (mode === "guide") {
+          output.textContent = data.guide_markdown || "(no guide markdown returned)";
+          return;
+        }
+        output.textContent = data.story || "(no story returned)";
+      }
+
+      async function loadTour() {
+        output.textContent = "Loading…";
+        loadBtn.disabled = true;
+        try {
+          let parsedRoute = null;
+          try {
+            parsedRoute = parseRoutePoints(routePoints.value);
+          } catch (e) {
+            output.textContent = `Route points error: ${String(e)}`;
+            return;
+          }
+
+          const body = { route_name: routeName.value || "web_tour" };
+          if (parsedRoute && parsedRoute.length >= 2) body.route_points = parsedRoute;
+
+          const resp = await fetch("/api/tour", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(`HTTP ${resp.status}: ${txt}`);
+          }
+          const data = await resp.json();
+
+          renderMap(data);
+          const stops = (data.guide && data.guide.stops) || [];
+          renderStopsList(stops);
+          renderOutput(data);
+        } catch (e) {
+          output.textContent = String(e);
+        } finally {
+          loadBtn.disabled = false;
+        }
+      }
+
+      loadBtn.addEventListener("click", loadTour);
+      loadTour();
+    </script>
+  </body>
+</html>

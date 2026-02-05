@@ -1,11 +1,11 @@
 @startuml 02_gcp_architecture
 !include _common.puml
-title Agentic Wikipedia — GCP / Vertex AI Architecture (Current)
+title ANC — GCP / Vertex AI Architecture (Current)
 
 actor "User" as user
 
 node "Local dev (macOS / Linux)" as local {
-  rectangle "Notebook\nagentic_wikipedia_gcp.ipynb" as notebook
+  rectangle "Notebook\nanc_gcp.ipynb" as notebook
   rectangle "RAG pipeline\n(chunk + retrieve + prompt)" as rag
   database "Vector store\n(Chroma / FAISS)" as vs
 }

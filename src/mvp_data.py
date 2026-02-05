@@ -69,8 +69,10 @@ def minimal_wiki_pages() -> dict[int, dict[str, Any]]:
             ),
             "content": (
                 "Toy extract:\n"
-                "- The highway runs through several states and serves regional freight traffic.\n"
-                "- It connects a number of metropolitan areas and rural corridors.\n"
+                "- Interstate 81 runs through Tennessee, Virginia, West Virginia, Maryland, "
+                "Pennsylvania, and New York.\n"
+                "- It serves regional freight traffic and connects a mix of metropolitan areas "
+                "and rural corridors.\n"
             ),
             "categories": ["Interstate Highway System"],
             "lat": 38.15,

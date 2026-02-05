@@ -1,5 +1,2 @@
--r requirements.txt
 jupyterlab
 ipykernel
-python-dotenv
-

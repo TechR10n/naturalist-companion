@@ -1,8 +1,8 @@
-"""Re-export the offline LangGraph MVP helpers under the anc namespace."""
+"""Convenience re-exports for the offline LangGraph MVP helpers."""
 
 from __future__ import annotations
 
-from anc.agentic_wikipedia.langgraph_mvp import (  # noqa: F401
+from .langgraph_mvp import (  # noqa: F401
     MVPConfig,
     GraphState,
     Tools,

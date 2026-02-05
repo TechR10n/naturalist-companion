@@ -11,7 +11,7 @@ from typing import Any, Callable, Literal, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from anc.agentic_wikipedia import mvp_data
+from . import mvp_data
 
 
 class RoutePoint(TypedDict):
@@ -615,10 +615,11 @@ def run_mvp(
     config: MVPConfig | None = None,
     route_name: str = "mvp_route",
     out_dir: str | Path | None = None,
+    tools: Tools | None = None,
 ) -> GraphState:
     """Execute the offline MVP graph and return the resulting state."""
     cfg = config or _default_config()
-    app = build_mvp_app()
+    app = build_mvp_app(tools=tools)
     state: GraphState = {"config": cfg, "route_name": route_name}
     if route_points is not None:
         state["route_points"] = route_points
