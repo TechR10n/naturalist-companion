@@ -1,0 +1,48 @@
+@startuml 06_anc_databricks_production_app
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam dpi 160
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #334155
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #B45309
+  FontColor #92400E
+}
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+title ANC — Future Production Databricks Full App
+
+start
+:Mobile/Web user asks question,\npasses route context, and optionally adds photo;
+:[API] receive request;
+:[Orchestrator] build retrieval/generation plan;
+:[Cache] lookup for hot prompts/routes;
+:[Vector Search] retrieve top-k\n(Unity Catalog governed);
+:[LLM/Vision endpoints] grounded generation;
+:[Policy gate] citation + safety + uncertainty checks;
+:[API] return stop cards + citations + confidence;
+
+fork
+  :[Pipelines] ingest from Wikipedia + USGS + Maps;
+  :[Delta + UC] write Bronze/Silver/Gold tables;
+  :[Embedding job] batch upsert from chunk deltas;
+  :[Vector Search] refresh indexes;
+fork again
+  :[MLflow] tracing + eval artifacts;
+  :[Monitoring] quality/latency/drift dashboards;
+  :[Jobs] refresh signals from monitoring;
+end fork
+
+:[Free Edition controls]\nbatch refresh windows + strict top-k budgets +\nsmaller default model tier + aggressive cache;
+stop
+
+note right
+Real-data path replaces toy retrieval adapters,\nwhile preserving output schema and quality gates.
+end note
+
+@enduml

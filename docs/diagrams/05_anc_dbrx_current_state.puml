@@ -1,0 +1,41 @@
+@startuml 05_anc_dbrx_current_state
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultTextAlignment left
+skinparam dpi 160
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #334155
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #B45309
+  FontColor #92400E
+}
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+title ANC — Databricks Notebook Current State (Exported Run)
+
+start
+:User runs `anc_dbrx.ipynb` and asks a route question;
+:[Notebook] Stage 1\nload Wikipedia pages + image previews;
+:[Wikipedia API]\nreturn docs + thumbnails;
+:[Notebook] Stage 2\nchunk docs + prepare embedding batches;
+:[Embedding endpoint]\n`bge-large-en` returns vectors;
+:[Notebook] build + save local FAISS index\n(driver filesystem);
+:[Notebook] Stage 3\nretrieve top chunks + compose prompt;
+:[LLM endpoint]\n`llama-3.1-8b-instruct` returns answer;
+if (Run optional StateGraph?) then (yes)
+  :[StateGraph] run/eval shared workflow path;
+  :[Artifacts] write `out/stategraph/*`;
+endif
+:[MLflow] LangChain autolog traces;
+:[Notebook] return response + citations;
+stop
+
+note right
+Current notebook StateGraph retrieval path\nis deterministic corpus based.\nFAISS index is local/ephemeral.
+end note
+
+@enduml
