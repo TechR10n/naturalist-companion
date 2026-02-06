@@ -848,6 +848,25 @@ def _token_overlap_ratio(text_a: str, text_b: str) -> float:
     return float(len(ta & tb)) / float(len(ta))
 
 
+def _safe_stop_check(response: str, safety_notes: list[str]) -> tuple[bool, list[str]]:
+    """Validate safety guidance while ignoring the canonical safe-note text."""
+
+    response_l = str(response or "").lower()
+    canonical_note = SAFE_STOP_NOTE.lower()
+    notes_l = [str(note or "").strip().lower() for note in safety_notes if str(note or "").strip()]
+
+    has_safe_guidance = (
+        canonical_note in response_l
+        or "legal pull-offs" in response_l
+        or any("legal pull-offs" in note for note in notes_l)
+    )
+
+    # Remove the canonical note to avoid false unsafe hits from its warning phrases.
+    scrubbed_response = response_l.replace(canonical_note, " ")
+    unsafe_hits = [phrase for phrase in UNSAFE_PHRASES if phrase in scrubbed_response]
+    return has_safe_guidance and not unsafe_hits, unsafe_hits
+
+
 def _quality_gate_node(state: StateGraphState) -> StateGraphState:
     cfg = state["config"]
     answer_payload = state.get("answer") or {}
@@ -897,14 +916,9 @@ def _quality_gate_node(state: StateGraphState) -> StateGraphState:
         float(citations_valid) / float(citations_total) if citations_total else 0.0
     )
 
-    response_l = answer.response.lower()
-    safe_stop_ok = "legal pull-offs" in response_l
-    if safe_stop_ok:
-        for phrase in UNSAFE_PHRASES:
-            if phrase in response_l:
-                safe_stop_ok = False
-                hallucination_flags.append(f"unsafe_phrase:{phrase}")
-                break
+    safe_stop_ok, unsafe_hits = _safe_stop_check(answer.response, list(answer.safety_notes))
+    for phrase in unsafe_hits:
+        hallucination_flags.append(f"unsafe_phrase:{phrase}")
 
     reasons: list[str] = []
     if citation_coverage < float(cfg["citation_coverage_threshold"]):
