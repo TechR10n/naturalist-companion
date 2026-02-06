@@ -1,0 +1,9 @@
+backoff==2.2.1
+databricks-langchain
+langchain==0.3.27
+langchain-core==0.3.83
+langchain-community==0.3.31
+langchain-text-splitters==0.3.11
+langgraph==0.5.3
+faiss-cpu==1.13.2
+wikipedia==1.4.0
