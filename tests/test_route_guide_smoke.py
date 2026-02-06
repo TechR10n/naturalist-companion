@@ -1,18 +1,18 @@
-"""Smoke tests for the offline LangGraph MVP."""
+"""Smoke tests for the offline route-guide LangGraph flow."""
 
 from __future__ import annotations
 
 import unittest
 from datetime import datetime
 
-from naturalist_companion.mvp import build_mvp_app
+from naturalist_companion.route_guide import build_route_guide_app
 
 
-class TestLangGraphMVPSmoke(unittest.TestCase):
-    """Smoke tests for the offline LangGraph MVP graph."""
+class TestRouteGuideSmoke(unittest.TestCase):
+    """Smoke tests for the offline route-guide graph."""
 
     def test_smoke_executes_all_nodes(self) -> None:
-        app = build_mvp_app()
+        app = build_route_guide_app()
         result = app.invoke(
             {
                 "config": {
@@ -57,7 +57,7 @@ class TestLangGraphMVPSmoke(unittest.TestCase):
                 self.assertIn("wikipedia.org/wiki/", c.get("url", ""))
 
     def test_sampling_includes_route_endpoint(self) -> None:
-        app = build_mvp_app()
+        app = build_route_guide_app()
         result = app.invoke(
             {
                 "config": {

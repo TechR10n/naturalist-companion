@@ -1,7 +1,7 @@
 """Live Wikipedia API tool implementations.
 
-These are optional helpers to run the LangGraph MVP against the real Wikipedia API.
-The offline MVP remains the default.
+These are optional helpers to run the route-guide graph against the real
+Wikipedia API. Offline fallback data remains available when needed.
 
 Notes
 - Wikipedia asks API clients to send a descriptive User-Agent.
@@ -11,17 +11,45 @@ Notes
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from html import escape as html_escape
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator
 
 if TYPE_CHECKING:
-    from .langgraph_mvp import Tools
+    from .route_guide_graph import Tools
 
 WIKIPEDIA_IMAGE_USER_AGENT = "naturalist-companion/0.1 (notebook image preview)"
+HIGHWAY_TITLE_RE = re.compile(
+    r"\b(interstate|highway|motorway|freeway|expressway|route\s+\d+|i-\d+)\b",
+    flags=re.IGNORECASE,
+)
+LANDSCAPE_TERMS = (
+    "valley",
+    "ridge",
+    "mountain",
+    "mountains",
+    "overlook",
+    "park",
+    "state park",
+    "national park",
+    "gorge",
+    "canyon",
+    "forest",
+    "river",
+    "lake",
+    "falls",
+    "waterfall",
+    "plateau",
+    "summit",
+    "trail",
+    "scenic",
+    "vista",
+)
 
 
 @dataclass(frozen=True)
@@ -187,11 +215,197 @@ def wikipedia_thumbnail_for_title(
     return None
 
 
+def _is_highway_title(title: str) -> bool:
+    return bool(HIGHWAY_TITLE_RE.search(str(title or "")))
+
+
+def _is_landscape_title(title: str) -> bool:
+    t = str(title or "").strip().lower()
+    if not t:
+        return False
+    return any(term in t for term in LANDSCAPE_TERMS)
+
+
+def _wikipedia_search_titles(
+    query: str,
+    *,
+    limit: int = 8,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> list[str]:
+    payload = wikipedia_api_get(
+        {
+            "action": "query",
+            "list": "search",
+            "format": "json",
+            "formatversion": 2,
+            "srlimit": max(1, min(int(limit), 20)),
+            "srsearch": str(query or "").strip(),
+        },
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    out: list[str] = []
+    for item in ((payload.get("query") or {}).get("search") or []):
+        title = str(item.get("title") or "").strip()
+        if title:
+            out.append(title)
+    return out
+
+
+def wikipedia_coordinates_for_title(
+    title: str,
+    *,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> tuple[float, float] | None:
+    payload = wikipedia_api_get(
+        {
+            "action": "query",
+            "prop": "coordinates",
+            "redirects": 1,
+            "titles": str(title or "").strip(),
+            "format": "json",
+            "formatversion": 2,
+        },
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    for page in ((payload.get("query") or {}).get("pages") or []):
+        if not isinstance(page, dict):
+            continue
+        coords = page.get("coordinates") or []
+        if coords and isinstance(coords[0], dict):
+            lat = coords[0].get("lat")
+            lon = coords[0].get("lon")
+            if lat is not None and lon is not None:
+                return float(lat), float(lon)
+    return None
+
+
+def _wikipedia_geosearch_titles(
+    *,
+    lat: float,
+    lon: float,
+    radius_m: int,
+    limit: int,
+    language: str,
+    user_agent: str,
+    timeout_s: float,
+) -> list[str]:
+    payload = wikipedia_api_get(
+        {
+            "action": "query",
+            "list": "geosearch",
+            "gscoord": f"{lat}|{lon}",
+            "gsradius": int(radius_m),
+            "gslimit": max(1, min(int(limit), 30)),
+            "format": "json",
+            "formatversion": 2,
+        },
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    out: list[str] = []
+    for item in ((payload.get("query") or {}).get("geosearch") or []):
+        title = str(item.get("title") or "").strip()
+        if title:
+            out.append(title)
+    return out
+
+
+def _landscape_refs_for_title(
+    title: str,
+    *,
+    route_hint: str | None = None,
+    max_refs: int = 6,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> list[dict[str, str]]:
+    refs: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def _add_title(candidate: str) -> None:
+        key = candidate.lower().strip()
+        if not key or key in seen:
+            return
+        if _is_highway_title(candidate):
+            return
+        if not _is_landscape_title(candidate):
+            return
+        seen.add(key)
+        refs.append({"title": candidate, "url": wikipedia_page_url(candidate, language=language)})
+
+    if _is_landscape_title(title) and not _is_highway_title(title):
+        _add_title(title)
+
+    coords = wikipedia_coordinates_for_title(
+        title,
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    if coords:
+        nearby = _wikipedia_geosearch_titles(
+            lat=coords[0],
+            lon=coords[1],
+            radius_m=40000,
+            limit=20,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+        for candidate in nearby:
+            _add_title(candidate)
+            if len(refs) >= int(max_refs):
+                return refs[: int(max_refs)]
+
+    hint_queries: list[str] = []
+    if route_hint:
+        hint_queries.extend(
+            [
+                f"{route_hint} scenic overlook",
+                f"{route_hint} valley ridge landscape",
+                f"{route_hint} national park mountain",
+            ]
+        )
+    hint_queries.extend(
+        [
+            f"{title} valley",
+            f"{title} mountain",
+            f"{title} overlook",
+            f"{title} geology landscape",
+        ]
+    )
+
+    for query in hint_queries:
+        for candidate in _wikipedia_search_titles(
+            query,
+            limit=6,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        ):
+            _add_title(candidate)
+            if len(refs) >= int(max_refs):
+                return refs[: int(max_refs)]
+
+    return refs[: int(max_refs)]
+
+
 def display_wikipedia_images_for_pages(
     items: Iterable[Any] | None,
     *,
     max_images: int = 4,
     thumb_px: int = 640,
+    prefer_landscape: bool = False,
+    route_hint: str | None = None,
     language: str = "en",
     user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
     timeout_s: float = 10.0,
@@ -200,24 +414,50 @@ def display_wikipedia_images_for_pages(
     seen: set[str] = set()
 
     try:
+        from IPython.display import HTML as IPyHTML
         from IPython.display import Image as IPyImage
         from IPython.display import Markdown as IPyMarkdown
         from IPython.display import display as ipy_display
     except Exception:
+        IPyHTML = None
         IPyImage = None
         IPyMarkdown = None
         ipy_display = None
 
-    for ref in iter_wikipedia_page_refs(
-        items,
-        language=language,
-        user_agent=user_agent,
-        timeout_s=timeout_s,
-    ):
+    base_refs = list(
+        iter_wikipedia_page_refs(
+            items,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+    )
+
+    refs: list[dict[str, str]] = []
+    if prefer_landscape:
+        for ref in base_refs:
+            expanded = _landscape_refs_for_title(
+                ref["title"],
+                route_hint=route_hint,
+                max_refs=6,
+                language=language,
+                user_agent=user_agent,
+                timeout_s=timeout_s,
+            )
+            refs.extend(expanded)
+        if not refs:
+            refs = base_refs
+    else:
+        refs = base_refs
+
+    for ref in refs:
         title = ref["title"]
         if title in seen:
             continue
         seen.add(title)
+
+        if prefer_landscape and _is_highway_title(title):
+            continue
 
         image_url = wikipedia_thumbnail_for_title(
             title,
@@ -233,7 +473,20 @@ def display_wikipedia_images_for_pages(
         page_url = ref.get("url") or wikipedia_page_url(title, language=language)
         if ipy_display and IPyImage and IPyMarkdown:
             ipy_display(IPyMarkdown(f"**Wikipedia image preview: {title}**"))
-            ipy_display(IPyImage(url=image_url, width=min(int(thumb_px), 720)))
+            if IPyHTML:
+                safe_image_url = html_escape(image_url, quote=True)
+                safe_title = html_escape(title, quote=True)
+                # Keep previews balanced with notebook text columns and PDF exports.
+                ipy_display(
+                    IPyHTML(
+                        "<div style=\"margin: 0.35rem auto 0.55rem auto; width: 82%; max-width: 680px;\">"
+                        f"<img src=\"{safe_image_url}\" alt=\"{safe_title}\" "
+                        "style=\"display:block; width:100%; height:auto; border-radius:8px;\"/>"
+                        "</div>"
+                    )
+                )
+            else:
+                ipy_display(IPyImage(url=image_url, width=min(int(thumb_px), 560)))
             ipy_display(IPyMarkdown(f"[Open page]({page_url})"))
         else:
             print(f"Wikipedia image preview: {title}")
@@ -246,6 +499,162 @@ def display_wikipedia_images_for_pages(
     if shown == 0:
         print("[wiki-images] No thumbnail images found for the selected pages.")
     return shown
+
+
+def collect_wikipedia_geo_points(
+    items: Iterable[Any] | None,
+    *,
+    max_points: int = 12,
+    prefer_landscape: bool = False,
+    route_hint: str | None = None,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> list[dict[str, Any]]:
+    refs = list(
+        iter_wikipedia_page_refs(
+            items,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+    )
+    if prefer_landscape:
+        expanded: list[dict[str, str]] = []
+        for ref in refs:
+            expanded.extend(
+                _landscape_refs_for_title(
+                    ref["title"],
+                    route_hint=route_hint,
+                    max_refs=6,
+                    language=language,
+                    user_agent=user_agent,
+                    timeout_s=timeout_s,
+                )
+            )
+        if expanded:
+            refs = expanded
+
+    points: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for ref in refs:
+        title = str(ref.get("title") or "").strip()
+        if not title:
+            continue
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if prefer_landscape and _is_highway_title(title):
+            continue
+        coords = wikipedia_coordinates_for_title(
+            title,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+        if not coords:
+            continue
+        points.append(
+            {
+                "title": title,
+                "url": str(ref.get("url") or wikipedia_page_url(title, language=language)),
+                "lat": float(coords[0]),
+                "lon": float(coords[1]),
+            }
+        )
+        if len(points) >= int(max_points):
+            break
+    return points
+
+
+def display_openstreetmap_for_pages(
+    items: Iterable[Any] | None,
+    *,
+    max_points: int = 12,
+    prefer_landscape: bool = False,
+    route_hint: str | None = None,
+    route_points: list[dict[str, float]] | None = None,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+    height_px: int = 420,
+) -> int:
+    points = collect_wikipedia_geo_points(
+        items,
+        max_points=max_points,
+        prefer_landscape=prefer_landscape,
+        route_hint=route_hint,
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+
+    if not points:
+        print("[wiki-map] No mappable Wikipedia coordinates found.")
+        return 0
+
+    route = []
+    for rp in route_points or []:
+        try:
+            route.append([float(rp["lat"]), float(rp["lon"])])
+        except Exception:
+            continue
+    if not route:
+        route = [[float(p["lat"]), float(p["lon"])] for p in points]
+
+    try:
+        from IPython.display import HTML as IPyHTML
+        from IPython.display import display as ipy_display
+    except Exception:
+        IPyHTML = None
+        ipy_display = None
+
+    if not IPyHTML or not ipy_display:
+        print("[wiki-map] Install/use a notebook environment to render OpenStreetMap previews.")
+        for p in points:
+            print(f"  - {p['title']}: https://www.openstreetmap.org/?mlat={p['lat']}&mlon={p['lon']}")
+        return len(points)
+
+    map_id = f"anc_map_{int(time.time() * 1000)}"
+    center_lat = sum(float(p["lat"]) for p in points) / float(len(points))
+    center_lon = sum(float(p["lon"]) for p in points) / float(len(points))
+
+    html = f"""
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="{map_id}" style="width: 100%; height: {int(height_px)}px; border: 1px solid #ddd; border-radius: 8px;"></div>
+<script>
+(function() {{
+  const map = L.map("{map_id}");
+  const points = {json.dumps(points)};
+  const route = {json.dumps(route)};
+  map.setView([{center_lat:.6f}, {center_lon:.6f}], 8);
+  L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png", {{
+    maxZoom: 18,
+    attribution: "&copy; OpenStreetMap contributors"
+  }}).addTo(map);
+  const latlngs = [];
+  points.forEach((p) => {{
+    const ll = [p.lat, p.lon];
+    latlngs.push(ll);
+    const marker = L.marker(ll).addTo(map);
+    const label = `<b>${{p.title}}</b><br/><a href="${{p.url}}" target="_blank" rel="noopener">Wikipedia</a>`;
+    marker.bindPopup(label);
+  }});
+  if (route.length >= 2) {{
+    L.polyline(route, {{color: "#1d4ed8", weight: 3, opacity: 0.75}}).addTo(map);
+  }} else if (latlngs.length >= 2) {{
+    L.polyline(latlngs, {{color: "#1d4ed8", weight: 2, opacity: 0.55, dashArray: "6,6"}}).addTo(map);
+  }}
+  if (latlngs.length > 0) {{
+    map.fitBounds(L.latLngBounds(latlngs), {{padding: [16, 16]}});
+  }}
+}})();
+</script>
+"""
+    ipy_display(IPyHTML(html))
+    return len(points)
 
 
 # Backward-compatible aliases for notebook helper names.
@@ -279,7 +688,7 @@ def wikipedia_tools(
     max_backoff_s: float = 20.0,
 ) -> "Tools":
     """Build live Tools for Wikipedia GeoSearch + page fetch."""
-    from .langgraph_mvp import Tools
+    from .route_guide_graph import Tools
 
     cfg = WikipediaAPIConfig(
         language=language,

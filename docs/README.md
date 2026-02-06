@@ -8,7 +8,7 @@ Developer workflow reference:
 ## Product
 
 - `docs/PRD.md` - full roadmap and requirements
-- `docs/wireframes.md` - low-fidelity MVP wireframes
+- `docs/wireframes.md` - low-fidelity baseline wireframes
 - `docs/anc_spec_gcp.md` - current GCP / Vertex AI baseline spec
 - `docs/anc_spec_dbrx.md` - Databricks roadmap baseline spec
 - `docs/anc_spec.ollama.md` - local Ollama baseline spec
@@ -18,10 +18,10 @@ Developer workflow reference:
 - `docs/diagrams/README.md` - PlantUML diagrams (local, GCP, Databricks)
 - `docs/architecture_camera_vision.md` - camera pipeline notes
 
-## MVP specs
+## Baseline specs
 
-- `docs/roadside_geology_v0_mvp_spec.md`
-- `docs/roadside_naturalist_v0_mvp_spec.md`
+- `docs/roadside_geology_v0_spec.md`
+- `docs/roadside_naturalist_v0_spec.md`
 
 ## Use cases
 

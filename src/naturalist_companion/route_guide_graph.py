@@ -1,4 +1,4 @@
-"""Offline LangGraph MVP for the roadside geology workflow."""
+"""Offline route-guide graph module."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, Callable, Literal, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from . import mvp_data
+from . import fallback_data
 
 
 class RoutePoint(TypedDict):
@@ -35,7 +35,7 @@ class WikiCandidate(TypedDict):
 
 
 class WikiPage(TypedDict):
-    """Fetched Wikipedia page payload used by the MVP graph."""
+    """Fetched Wikipedia page payload used by the route-guide graph."""
 
     pageid: int
     title: str
@@ -69,7 +69,7 @@ class StopSeed(TypedDict):
 
 
 class StopCard(TypedDict):
-    """Structured stop card produced by the MVP."""
+    """Structured stop card produced by the route guide."""
 
     stop_id: str
     route_km: float
@@ -92,8 +92,8 @@ class Guide(TypedDict):
     stops: list[StopCard]
 
 
-class MVPConfig(TypedDict):
-    """Configuration options for the offline MVP."""
+class RouteGuideConfig(TypedDict):
+    """Configuration options for the offline route guide."""
 
     sample_every_m: int
     geosearch_radius_m: int
@@ -107,7 +107,7 @@ class GraphState(TypedDict, total=False):
     """Shared state container passed between LangGraph nodes."""
 
     trace: list[str]
-    config: MVPConfig
+    config: RouteGuideConfig
     route_name: str
     route_points: list[dict[str, float]]
 
@@ -161,7 +161,7 @@ def _append_trace(state: GraphState, node: str) -> list[str]:
     return [*state.get("trace", []), node]
 
 
-def _default_config() -> MVPConfig:
+def _default_config() -> RouteGuideConfig:
     return {
         "sample_every_m": 10_000,
         "geosearch_radius_m": 15_000,
@@ -172,7 +172,7 @@ def _default_config() -> MVPConfig:
     }
 
 
-def _merge_config(overrides: MVPConfig | None) -> MVPConfig:
+def _merge_config(overrides: RouteGuideConfig | None) -> RouteGuideConfig:
     """Merge optional runtime overrides onto defaults with basic coercion."""
     cfg = _default_config()
     if not overrides:
@@ -199,7 +199,7 @@ def _merge_config(overrides: MVPConfig | None) -> MVPConfig:
 
 
 def _ingest_route(state: GraphState) -> GraphState:
-    route_points = state.get("route_points") or mvp_data.minimal_route_points()
+    route_points = state.get("route_points") or fallback_data.fallback_route_points()
     if len(route_points) < 2:
         raise ValueError("route_points must include at least 2 points")
 
@@ -441,13 +441,13 @@ def _write_stop_card(state: GraphState) -> GraphState:
             if not text:
                 continue
             bullets.append(f"{prefix}{text[:160]}")
-        return bullets or [f"{prefix}(No retrieved text for this stop in the MVP dataset.)"]
+        return bullets or [f"{prefix}(No retrieved text for this stop in the fallback dataset.)"]
 
     card: StopCard = {
         "stop_id": seed["stop_id"],
         "route_km": seed["route_km"],
         "center": seed["center"],
-        "title": f"{seed['title']} (MVP stop)",
+        "title": seed["title"],
         "why_stop": why,
         "what_to_look_for": _bullets("", 3),
         "key_facts": _bullets("", 3),
@@ -516,7 +516,7 @@ def _should_continue(state: GraphState) -> Literal["continue", "done"]:
 def _render_outputs(state: GraphState) -> GraphState:
     guide: Guide = {
         "route": {
-            "name": state.get("route_name") or "mvp_route",
+            "name": state.get("route_name") or "route_guide",
             "num_points": len(state["route"]),
             "length_km": state["route_length_km"],
         },
@@ -526,7 +526,7 @@ def _render_outputs(state: GraphState) -> GraphState:
     }
 
     md_lines: list[str] = [
-        f"# Roadside Geology (MVP) — {guide['route']['name']}",
+        f"# Roadside Geology — {guide['route']['name']}",
         "",
         f"- Length: {guide['route']['length_km']} km",
         f"- Stops: {len(guide['stops'])}",
@@ -563,9 +563,9 @@ def _render_outputs(state: GraphState) -> GraphState:
     }
 
 
-def build_mvp_app(tools: Tools | None = None):
-    """Build the offline MVP LangGraph app."""
-    tools = tools or offline_tools()
+def build_route_guide_app(tools: Tools | None = None):
+    """Build the offline route-guide LangGraph app."""
+    tools = tools or fallback_tools()
 
     graph: StateGraph = StateGraph(GraphState)
     graph.add_node("ingest_route", _ingest_route)
@@ -601,11 +601,11 @@ def build_mvp_app(tools: Tools | None = None):
     return graph.compile()
 
 
-def offline_tools() -> Tools:
-    """Return offline-only tool implementations for the MVP."""
-    pages = mvp_data.minimal_wiki_pages()
+def fallback_tools() -> Tools:
+    """Return fallback tool implementations for offline runs."""
+    pages = fallback_data.fallback_wiki_pages()
     # Return different candidates for early vs late route points so the per-stop
-    # loop runs more than once in the MVP.
+    # loop runs more than once in the fallback path.
     geosearch_early = [
         {"pageid": 2001, "title": "Interstate 81", "lat": 38.15, "lon": -79.07, "dist_m": 1200},
         {"pageid": 1001, "title": "Basalt", "lat": 38.46, "lon": -78.88, "dist_m": 6200},
@@ -637,17 +637,17 @@ def offline_tools() -> Tools:
     return Tools(geosearch=geosearch, fetch_page=fetch_page)
 
 
-def run_mvp(
+def run_route_guide(
     *,
     route_points: list[dict[str, float]] | None = None,
-    config: MVPConfig | None = None,
-    route_name: str = "mvp_route",
+    config: RouteGuideConfig | None = None,
+    route_name: str = "route_guide",
     out_dir: str | Path | None = None,
     tools: Tools | None = None,
 ) -> GraphState:
-    """Execute the offline MVP graph and return the resulting state."""
+    """Execute the offline route-guide graph and return the resulting state."""
     cfg = _merge_config(config)
-    app = build_mvp_app(tools=tools)
+    app = build_route_guide_app(tools=tools)
     state: GraphState = {"config": cfg, "route_name": route_name}
     if route_points is not None:
         state["route_points"] = route_points

@@ -14,8 +14,8 @@ help:
 	@echo "  make setup-dbrx   # uv sync base + dev + dbrx extras"
 	@echo "  make lock         # refresh uv.lock for Python $(PYTHON_VERSION)"
 	@echo "  make test         # run unittest suite"
-	@echo "  make smoke        # run offline LangGraph smoke check"
-	@echo "  make smoke-rag    # run local RAG smoke check (toy data)"
+	@echo "  make smoke        # run offline route-guide smoke check"
+	@echo "  make smoke-rag    # run local RAG smoke check (fallback data)"
 	@echo "  make smoke-vertex # run Vertex import smoke check"
 	@echo "  make check        # run test + smoke"
 	@echo "  make web          # run Flask app in debug mode"
@@ -45,10 +45,10 @@ test:
 	$(UV) run python -m unittest discover -s tests -p 'test_*.py'
 
 smoke:
-	$(UV) run python scripts/smoke_langgraph_mvp.py --no-write
+	$(UV) run python scripts/smoke_route_guide.py --no-write
 
 smoke-rag:
-	$(UV) run --extra ollama python scripts/smoke_local_rag.py --toy-data
+	$(UV) run --extra ollama python scripts/smoke_local_rag.py --fallback-data
 
 smoke-vertex:
 	$(UV) run --extra gcp python scripts/smoke_vertex_ai.py
@@ -59,7 +59,8 @@ web:
 	$(UV) run python -m naturalist_companion --debug
 
 clean:
-	rm -rf out/mvp
+	rm -rf out/guide
+	rm -rf out/stategraph out/stategraph_eval out/stategraph_release_gate out/stategraph_store
 	find . -path './.venv' -prune -o -name '__pycache__' -type d -exec rm -rf {} +
 	find . -path './.venv' -prune -o -name '.pytest_cache' -type d -exec rm -rf {} +
 	find . -path './.venv' -prune -o -name '.mypy_cache' -type d -exec rm -rf {} +

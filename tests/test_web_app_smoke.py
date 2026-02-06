@@ -18,10 +18,10 @@ class TestWebAppSmoke(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.get_json(), {"ok": True})
 
-    def test_mvp_endpoint_returns_guide(self) -> None:
+    def test_guide_endpoint_returns_guide(self) -> None:
         app = create_app()
         client = app.test_client()
-        resp = client.post("/api/mvp", json={"route_name": "unit_test_web"})
+        resp = client.post("/api/guide", json={"route_name": "unit_test_web"})
         self.assertEqual(resp.status_code, 200)
         payload = resp.get_json() or {}
         self.assertIn("guide", payload)
@@ -50,11 +50,11 @@ class TestWebAppSmoke(unittest.TestCase):
         guide = payload["guide"]
         self.assertIn("stops", guide)
 
-    def test_mvp_partial_config_merges_defaults(self) -> None:
+    def test_guide_partial_config_merges_defaults(self) -> None:
         app = create_app()
         client = app.test_client()
         resp = client.post(
-            "/api/mvp",
+            "/api/guide",
             json={
                 "route_name": "unit_test_partial_config",
                 "config": {"max_stops": 1},
@@ -68,7 +68,7 @@ class TestWebAppSmoke(unittest.TestCase):
         self.assertIn("sample_every_m", cfg)
         self.assertIn("geosearch_radius_m", cfg)
 
-    def test_mvp_string_false_does_not_enable_live_wikipedia(self) -> None:
+    def test_guide_string_false_does_not_enable_live_wikipedia(self) -> None:
         app = create_app()
         client = app.test_client()
         with mock.patch(
@@ -76,7 +76,7 @@ class TestWebAppSmoke(unittest.TestCase):
             side_effect=AssertionError("wikipedia_tools should not be called"),
         ):
             resp = client.post(
-                "/api/mvp",
+                "/api/guide",
                 json={"route_name": "unit_test_web", "live_wikipedia": "false"},
             )
         self.assertEqual(resp.status_code, 200)

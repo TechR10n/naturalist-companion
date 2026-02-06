@@ -1,6 +1,6 @@
-@startuml 04_langgraph_mvp_flow
+@startuml 04_langgraph_route_guide_flow
 !include _common.puml
-title ANC — Offline LangGraph MVP Flow
+title ANC — Offline LangGraph Route Guide Flow
 
 start
 :ingest_route;

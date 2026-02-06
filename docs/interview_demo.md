@@ -8,8 +8,8 @@ This script is a quick way to narrate the product direction while showing a work
 
 ## 2) Live pipeline demo (local)
 
-- `python scripts/smoke_langgraph_mvp.py`
-- Show output: `out/mvp/guide.md` and `out/mvp/guide.json`
+- `python scripts/smoke_route_guide.py`
+- Show output: `out/guide/guide.md` and `out/guide/guide.json`
 
 Key points to highlight
 - Retrieval happens before generation.
@@ -33,5 +33,5 @@ Key points to highlight
 
 ## 5) Future path (Databricks)
 
-- Show `docs/diagrams/03_future_databricks_architecture.puml`.
+- Show `docs/diagrams/06_anc_databricks_production_app.puml`.
 - Emphasize parity with the baseline notebook.

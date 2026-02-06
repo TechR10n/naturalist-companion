@@ -1,4 +1,4 @@
-# Roadside Geology (Wikipedia-only) - v0 MVP Spec
+# Roadside Geology (Wikipedia-only) - v0 Baseline Spec
 
 Build a short, citation-grounded field guide for any drivable route using only Wikipedia content.
 

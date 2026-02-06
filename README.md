@@ -5,7 +5,7 @@ Agentic Naturalist is a companion team of data + storytelling: intellectual sher
 Python package (import) name: `naturalist_companion`.
 
 Project layout (code):
-- `src/naturalist_companion/`: all runtime code (web app + offline MVP graph) plus `templates/` and `static/`.
+- `src/naturalist_companion/`: all runtime code (web app + offline route-guide graph) plus `templates/` and `static/`.
 - `scripts/`: runnable scenarios / smoke tests.
 - `tests/`: unit + smoke tests.
 
@@ -18,7 +18,7 @@ We are building toward a real, App Store-ready product that combines:
 
 Start here: `docs/PRD.md`
 
-Wireframes for early MVP flows: `docs/wireframes.md`
+Wireframes for early baseline flows: `docs/wireframes.md`
 
 ## Quickstart (recommended: uv + Makefile)
 
@@ -47,6 +47,7 @@ PyCharm shortcut:
 3) Run the web app:
 - `make web`
 - Open `http://127.0.0.1:8000`
+- Route guide API: `POST /api/guide`
 - Camera path: `POST /api/vision` accepts multipart `images` or JSON `images[].data_base64`.
 
 Optional: refresh lockfile:
@@ -55,13 +56,40 @@ Optional: refresh lockfile:
 Legacy bootstrap path is still available:
 - `./scripts/bootstrap_vertex.sh`
 
-## Offline LangGraph MVP (minimal data)
+## Offline Route Guide Graph (minimal data)
 
-This repo includes a tiny **offline** LangGraph MVP (no API calls) to validate graph wiring and smoke-test all nodes.
+This repo includes a tiny **offline** route-guide graph (no API calls) to validate graph wiring and smoke-test all nodes.
 
-- Run the MVP: `uv run python scripts/smoke_langgraph_mvp.py`
+- Run the route guide smoke: `uv run python scripts/smoke_route_guide.py`
 - Run without writing files: `make smoke`
 - Run unit tests: `make test`
+
+## StateGraph production path (local)
+
+This path keeps StateGraph orchestration fixed while moving retrieval to persistent, partitioned stores.
+
+1) Build/update persistent retrieval partitions:
+- Deterministic local data: `make stategraph-refresh`
+- Live Wikipedia data: `make stategraph-refresh-real`
+
+2) Run eval harness against persistent indexes:
+- `make stategraph-eval`
+- `make stategraph-cache-observe` (shows response/retrieval cache events across repeated runs)
+
+3) Run real-data release gate (promotion blocker):
+- `make stategraph-gate`
+- Gate fails if pass-rate/citation/quality thresholds are not met.
+- If top-k is raised above cap, gate requires net-gain vs strict-cap baseline.
+- Promotion command: `make stategraph-promote` (writes promotion record only when gate passes).
+
+4) Optional macOS scheduler (launchd):
+- `make stategraph-launchd-install`
+- Add `--load` if you want immediate `launchctl bootstrap`.
+
+Artifacts to inspect:
+- Refresh reports: `out/stategraph_store/refresh_reports/`
+- Eval reports: `out/stategraph_eval/`
+- Release gate report: `release_gate.json` under the gate run artifact root.
 
 ## ANC notebooks (optional)
 

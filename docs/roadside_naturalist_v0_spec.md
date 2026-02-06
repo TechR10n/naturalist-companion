@@ -1,4 +1,4 @@
-# Roadside Naturalist (Wikipedia-only) - v0 MVP Spec
+# Roadside Naturalist (Wikipedia-only) - v0 Baseline Spec
 
 This spec extends the geology guide into a broader naturalist experience (flora, fauna, ecology, and geology), still grounded in Wikipedia.
 

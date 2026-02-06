@@ -42,7 +42,7 @@ end fork
 stop
 
 note right
-Real-data path replaces toy retrieval adapters,\nwhile preserving output schema and quality gates.
+Real-data path replaces fallback retrieval adapters,\nwhile preserving output schema and quality gates.
 end note
 
 @enduml

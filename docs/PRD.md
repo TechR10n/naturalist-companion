@@ -40,21 +40,21 @@ See detailed scenarios:
 Wireframes (low fidelity):
 - `docs/wireframes.md`
 
-## MVP definition (next milestone)
+## Baseline definition (next milestone)
 
-The next milestone is **basic MVP functionality**: a working route-based guide pipeline, plus a camera results contract that can be exercised with stubbed data (UI wiring later).
+The next milestone is **basic baseline functionality**: a working route-based guide pipeline, plus a camera results contract that can be exercised with stubbed data (UI wiring later).
 
-### MVP must-haves
+### Baseline must-haves
 
-- Route guide generation works end-to-end using the existing offline MVP graph (toy data) and produces:
+- Route guide generation works end-to-end using the existing offline route-guide graph (fallback data) and produces:
   - `guide.json` stop cards with Wikipedia citations
   - a human-readable `guide.md` equivalent
 - A thin API surface exists for development:
-  - `POST /api/mvp` returns `guide` and a trace
+  - `POST /api/guide` returns `guide` and a trace
 - A minimal evaluation loop exists:
   - schema validation and citation validity checks
 
-### MVP nice-to-haves
+### Baseline nice-to-haves
 
 - Route input supports GPX and/or pasted JSON points.
 - Local RAG smoke test can run against a small Wikipedia slice (when internet is available) and return citations.
@@ -116,7 +116,7 @@ The next milestone is **basic MVP functionality**: a working route-based guide p
 See diagrams:
 - `docs/diagrams/01_local_architecture.puml`
 - `docs/diagrams/02_gcp_architecture.puml`
-- `docs/diagrams/03_future_databricks_architecture.puml`
+- `docs/diagrams/06_anc_databricks_production_app.puml`
 
 ## Data sources
 
@@ -173,7 +173,7 @@ See diagrams:
 - `docs/anc_spec_gcp.md`
 - `docs/anc_spec_dbrx.md`
 - `docs/anc_spec.ollama.md`
-- `docs/roadside_geology_v0_mvp_spec.md`
-- `docs/roadside_naturalist_v0_mvp_spec.md`
+- `docs/roadside_geology_v0_spec.md`
+- `docs/roadside_naturalist_v0_spec.md`
 - `docs/vision_prompt_schema.md`
 - `docs/vision_prompt_schema_naturalist.md`

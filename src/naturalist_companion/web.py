@@ -9,7 +9,7 @@ from typing import Any
 
 from flask import Flask, jsonify, render_template, request
 
-from .mvp import run_mvp
+from .route_guide import run_route_guide
 from .ollama_vision import VisionImage, classify_images
 
 
@@ -148,6 +148,20 @@ def _decode_base64_image(raw: str) -> bytes:
         raise ValueError("Invalid base64 image payload in `images`.") from e
 
 
+def _resolve_wikipedia_tools(*, payload: dict[str, Any], config: Any):
+    live_wikipedia = _as_bool(payload.get("live_wikipedia"))
+    if not live_wikipedia:
+        return None
+
+    from .wikipedia_tools import wikipedia_tools
+
+    language = "en"
+    if isinstance(config, dict) and isinstance(config.get("language"), str):
+        language = str(config["language"])
+    user_agent = str(payload.get("user_agent") or "naturalist-companion (local dev)")
+    return wikipedia_tools(language=language, user_agent=user_agent)
+
+
 def create_app() -> Flask:
     """Create the Flask application instance."""
     app = Flask(__name__)
@@ -175,26 +189,16 @@ def create_app() -> Flask:
     def healthz():
         return jsonify({"ok": True})
 
-    @app.post("/api/mvp")
-    def api_mvp():
+    @app.post("/api/guide")
+    def api_guide():
         payload: dict[str, Any] = request.get_json(silent=True) or {}
-        route_name = str(payload.get("route_name") or "web_mvp").strip() or "web_mvp"
+        route_name = str(payload.get("route_name") or "web_guide").strip() or "web_guide"
 
         route_points = payload.get("route_points")
         config = payload.get("config")
-        live_wikipedia = _as_bool(payload.get("live_wikipedia"))
+        tools = _resolve_wikipedia_tools(payload=payload, config=config)
 
-        tools = None
-        if live_wikipedia:
-            from .wikipedia_tools import wikipedia_tools
-
-            language = "en"
-            if isinstance(config, dict) and isinstance(config.get("language"), str):
-                language = str(config["language"])
-            user_agent = str(payload.get("user_agent") or "naturalist-companion (local dev)")
-            tools = wikipedia_tools(language=language, user_agent=user_agent)
-
-        result = run_mvp(
+        result = run_route_guide(
             route_name=route_name,
             route_points=route_points if isinstance(route_points, list) else None,
             config=config if isinstance(config, dict) else None,
@@ -216,19 +220,9 @@ def create_app() -> Flask:
 
         route_points = payload.get("route_points")
         config = payload.get("config")
-        live_wikipedia = _as_bool(payload.get("live_wikipedia"))
+        tools = _resolve_wikipedia_tools(payload=payload, config=config)
 
-        tools = None
-        if live_wikipedia:
-            from .wikipedia_tools import wikipedia_tools
-
-            language = "en"
-            if isinstance(config, dict) and isinstance(config.get("language"), str):
-                language = str(config["language"])
-            user_agent = str(payload.get("user_agent") or "naturalist-companion (local dev)")
-            tools = wikipedia_tools(language=language, user_agent=user_agent)
-
-        result = run_mvp(
+        result = run_route_guide(
             route_name=route_name,
             route_points=route_points if isinstance(route_points, list) else None,
             config=config if isinstance(config, dict) else None,

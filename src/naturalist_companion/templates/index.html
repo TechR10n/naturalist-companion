@@ -22,9 +22,9 @@
       </section>
 
       <section class="card">
-        <h2>Offline MVP demo</h2>
+        <h2>Offline route guide demo</h2>
         <p>
-          Generates a tiny route-based guide using toy Wikipedia-like data (no API calls).
+          Generates a tiny route-based guide using fallback Wikipedia-like data (no API calls).
         </p>
         <div class="row">
           <label>
@@ -92,7 +92,7 @@
       </section>
 
       <footer class="footer">
-        <span>Tip: use `POST /api/mvp` for routes and `POST /api/vision` for camera JSON.</span>
+        <span>Tip: use `POST /api/guide` for routes and `POST /api/vision` for camera JSON.</span>
       </footer>
     </main>
 
@@ -108,11 +108,11 @@
       const visionNote = document.getElementById("visionNote");
       const visionOutput = document.getElementById("visionOutput");
 
-      async function runMvp() {
+      async function runGuide() {
         output.textContent = "Running…";
         runBtn.disabled = true;
         try {
-          const resp = await fetch("/api/mvp", {
+          const resp = await fetch("/api/guide", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ route_name: routeName.value || "web_demo" }),
@@ -130,7 +130,7 @@
         }
       }
 
-      runBtn.addEventListener("click", runMvp);
+      runBtn.addEventListener("click", runGuide);
 
       async function runVision() {
         const files = Array.from(visionImages.files || []);

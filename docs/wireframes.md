@@ -1,6 +1,6 @@
-# Wireframes (MVP)
+# Wireframes (Baseline)
 
-These are low-fidelity wireframes meant to align the MVP user flows before building iOS UI.
+These are low-fidelity wireframes meant to align the baseline user flows before building iOS UI.
 
 ## 1) Home
 
