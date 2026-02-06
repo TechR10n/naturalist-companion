@@ -11,13 +11,17 @@ Notes
 from __future__ import annotations
 
 import json
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-import time
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator
 
-from .langgraph_mvp import Tools
+if TYPE_CHECKING:
+    from .langgraph_mvp import Tools
+
+WIKIPEDIA_IMAGE_USER_AGENT = "naturalist-companion/0.1 (notebook image preview)"
 
 
 @dataclass(frozen=True)
@@ -39,12 +43,230 @@ def _api_url(cfg: WikipediaAPIConfig, params: dict[str, Any]) -> str:
     return f"{base}?{qs}"
 
 
+def wikipedia_page_url(title: str, *, language: str = "en") -> str:
+    encoded = urllib.parse.quote(title.replace(" ", "_"), safe="()!$*,-./:;@_~")
+    return f"https://{language}.wikipedia.org/wiki/{encoded}"
+
+
+def title_from_wikipedia_url(url: str) -> str | None:
+    parsed = urllib.parse.urlparse(str(url or ""))
+    marker = "/wiki/"
+    if marker not in parsed.path:
+        return None
+    title = urllib.parse.unquote(parsed.path.split(marker, 1)[1]).replace("_", " ").strip()
+    return title or None
+
+
 def _get_json(cfg: WikipediaAPIConfig, params: dict[str, Any]) -> dict[str, Any]:
     url = _api_url(cfg, params)
     req = urllib.request.Request(url, headers={"User-Agent": cfg.user_agent})
     with urllib.request.urlopen(req, timeout=cfg.timeout_s) as resp:
         raw = resp.read().decode("utf-8")
     return json.loads(raw)
+
+
+def wikipedia_api_get(
+    params: dict[str, Any],
+    *,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> dict[str, Any]:
+    cfg = WikipediaAPIConfig(language=language, user_agent=user_agent, timeout_s=timeout_s)
+    try:
+        return _get_json(cfg, params)
+    except Exception:
+        return {}
+
+
+def wikipedia_title_from_search(
+    query: str,
+    *,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> str | None:
+    payload = wikipedia_api_get(
+        {
+            "action": "query",
+            "list": "search",
+            "format": "json",
+            "formatversion": 2,
+            "srlimit": 1,
+            "srsearch": query,
+        },
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    results = (payload.get("query") or {}).get("search") or []
+    if not results:
+        return None
+    title = str(results[0].get("title") or "").strip()
+    return title or None
+
+
+def iter_wikipedia_page_refs(
+    items: Iterable[Any] | None,
+    *,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+    title_resolver: Callable[[str], str | None] | None = None,
+) -> Iterator[dict[str, str]]:
+    if title_resolver is None:
+        title_resolver = lambda raw: wikipedia_title_from_search(
+            raw,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+
+    for item in items or []:
+        if isinstance(item, str):
+            raw = item.strip()
+            if not raw:
+                continue
+            title = title_from_wikipedia_url(raw)
+            if not title:
+                title = title_resolver(raw)
+            if title:
+                yield {"title": title, "url": wikipedia_page_url(title, language=language)}
+            continue
+
+        if isinstance(item, dict):
+            title = str(item.get("title") or "").strip()
+            url = str(item.get("url") or item.get("source") or "").strip()
+            if not title and url:
+                title = title_from_wikipedia_url(url) or ""
+            if title:
+                yield {"title": title, "url": url}
+            continue
+
+        metadata = getattr(item, "metadata", None) or {}
+        title = str(metadata.get("title") or "").strip()
+        url = str(metadata.get("source") or "").strip()
+        if not title and url:
+            title = title_from_wikipedia_url(url) or ""
+        if title:
+            yield {"title": title, "url": url}
+
+
+def wikipedia_thumbnail_for_title(
+    title: str,
+    *,
+    thumb_px: int = 640,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> str | None:
+    payload = wikipedia_api_get(
+        {
+            "action": "query",
+            "prop": "pageimages",
+            "format": "json",
+            "formatversion": 2,
+            "redirects": 1,
+            "piprop": "thumbnail|original",
+            "pithumbsize": int(thumb_px),
+            "titles": title,
+        },
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    )
+    pages = (payload.get("query") or {}).get("pages") or []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        thumb = page.get("thumbnail") or {}
+        original = page.get("original") or {}
+        source = thumb.get("source") or original.get("source")
+        if source:
+            return str(source)
+    return None
+
+
+def display_wikipedia_images_for_pages(
+    items: Iterable[Any] | None,
+    *,
+    max_images: int = 4,
+    thumb_px: int = 640,
+    language: str = "en",
+    user_agent: str = WIKIPEDIA_IMAGE_USER_AGENT,
+    timeout_s: float = 10.0,
+) -> int:
+    shown = 0
+    seen: set[str] = set()
+
+    try:
+        from IPython.display import Image as IPyImage
+        from IPython.display import Markdown as IPyMarkdown
+        from IPython.display import display as ipy_display
+    except Exception:
+        IPyImage = None
+        IPyMarkdown = None
+        ipy_display = None
+
+    for ref in iter_wikipedia_page_refs(
+        items,
+        language=language,
+        user_agent=user_agent,
+        timeout_s=timeout_s,
+    ):
+        title = ref["title"]
+        if title in seen:
+            continue
+        seen.add(title)
+
+        image_url = wikipedia_thumbnail_for_title(
+            title,
+            thumb_px=thumb_px,
+            language=language,
+            user_agent=user_agent,
+            timeout_s=timeout_s,
+        )
+        if not image_url:
+            continue
+
+        shown += 1
+        page_url = ref.get("url") or wikipedia_page_url(title, language=language)
+        if ipy_display and IPyImage and IPyMarkdown:
+            ipy_display(IPyMarkdown(f"**Wikipedia image preview: {title}**"))
+            ipy_display(IPyImage(url=image_url, width=min(int(thumb_px), 720)))
+            ipy_display(IPyMarkdown(f"[Open page]({page_url})"))
+        else:
+            print(f"Wikipedia image preview: {title}")
+            print(f"  image: {image_url}")
+            print(f"  page: {page_url}")
+
+        if shown >= int(max_images):
+            break
+
+    if shown == 0:
+        print("[wiki-images] No thumbnail images found for the selected pages.")
+    return shown
+
+
+# Backward-compatible aliases for notebook helper names.
+def _wiki_api_get(params: dict[str, Any]) -> dict[str, Any]:
+    return wikipedia_api_get(params)
+
+
+def _title_from_wikipedia_url(url: str) -> str | None:
+    return title_from_wikipedia_url(url)
+
+
+def _wiki_title_from_search(query: str) -> str | None:
+    return wikipedia_title_from_search(query)
+
+
+def _iter_page_refs(items: Iterable[Any] | None) -> Iterator[dict[str, str]]:
+    return iter_wikipedia_page_refs(items)
+
+
+def _wiki_thumbnail_for_title(title: str, thumb_px: int = 640) -> str | None:
+    return wikipedia_thumbnail_for_title(title, thumb_px=thumb_px)
 
 
 def wikipedia_tools(
@@ -55,8 +277,9 @@ def wikipedia_tools(
     max_retries: int = 3,
     backoff_s: float = 1.5,
     max_backoff_s: float = 20.0,
-) -> Tools:
+) -> "Tools":
     """Build live Tools for Wikipedia GeoSearch + page fetch."""
+    from .langgraph_mvp import Tools
 
     cfg = WikipediaAPIConfig(
         language=language,
