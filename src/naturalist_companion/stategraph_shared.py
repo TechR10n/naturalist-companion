@@ -31,7 +31,13 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal
+
+try:
+    # Pydantic on Python < 3.12 requires TypedDict from typing_extensions.
+    from typing_extensions import TypedDict
+except ImportError:  # pragma: no cover - fallback for minimal environments.
+    from typing import TypedDict
 
 import faiss
 import numpy as np
