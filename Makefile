@@ -3,7 +3,14 @@ SHELL := /bin/bash
 UV ?= uv
 PYTHON_VERSION ?= 3.12
 
-.PHONY: help setup setup-base setup-dev setup-gcp setup-ollama setup-dbrx lock test smoke smoke-rag smoke-vertex check web clean
+.PHONY: help setup setup-base setup-dev setup-gcp setup-ollama setup-dbrx lock test smoke smoke-rag smoke-vertex check notebook-pdf web clean
+
+NOTEBOOK ?= notebooks/anc_dbrx.ipynb
+NOTEBOOK_PDF_OUTDIR ?= notebooks
+NOTEBOOK_PDF_BASENAME ?=
+NOTEBOOK_PDF_TO ?= webpdf
+NOTEBOOK_WEBPDF_LANDSCAPE ?= 1
+NOTEBOOK_PDF_EXTRA_ARGS ?=
 
 help:
 	@echo "Targets:"
@@ -18,6 +25,7 @@ help:
 	@echo "  make smoke-rag    # run local RAG smoke check (fallback data)"
 	@echo "  make smoke-vertex # run Vertex import smoke check"
 	@echo "  make check        # run test + smoke"
+	@echo "  make notebook-pdf # sanitize + export notebook via nbconvert (default: webpdf landscape)"
 	@echo "  make web          # run Flask app in debug mode"
 	@echo "  make clean        # remove local outputs/cache artifacts"
 
@@ -54,6 +62,9 @@ smoke-vertex:
 	$(UV) run --extra gcp python scripts/smoke_vertex_ai.py
 
 check: test smoke
+
+notebook-pdf:
+	$(UV) run python scripts/export_notebook_pdf.py $(NOTEBOOK) --to $(NOTEBOOK_PDF_TO) $(if $(filter webpdf,$(NOTEBOOK_PDF_TO)),$(if $(filter 1 true TRUE yes YES,$(NOTEBOOK_WEBPDF_LANDSCAPE)),--landscape,),) --output-dir $(NOTEBOOK_PDF_OUTDIR) $(if $(NOTEBOOK_PDF_BASENAME),--output-basename $(NOTEBOOK_PDF_BASENAME),) $(NOTEBOOK_PDF_EXTRA_ARGS)
 
 web:
 	$(UV) run python -m naturalist_companion --debug

@@ -4,15 +4,21 @@
 skinparam shadowing false
 skinparam backgroundColor #FFFFFF
 skinparam defaultTextAlignment left
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
 skinparam roundcorner 12
-skinparam linetype ortho
-skinparam dpi 160
+skinparam linetype polyline
+skinparam dpi 150
+skinparam nodesep 30
+skinparam ranksep 42
+skinparam wrapWidth 220
 
 skinparam componentStyle rectangle
 skinparam packageStyle rectangle
 
 skinparam ArrowColor #334155
 skinparam ArrowFontColor #334155
+skinparam ArrowThickness 1.2
 
 skinparam actor {
   BackgroundColor #E0F2FE
@@ -69,4 +75,3 @@ skinparam class {
   BorderColor #334155
   FontColor #0F172A
 }
-

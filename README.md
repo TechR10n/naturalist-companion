@@ -113,6 +113,34 @@ Notebook policy:
 Optional notebook smoke execution:
 - `.venv/bin/jupyter nbconvert --to notebook --execute notebooks/anc_ollama.ipynb --output anc_ollama.executed.ipynb`
 
+Notebook PDF export (Databricks/JetBrains-safe):
+- `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb`
+- The Make target now defaults to `webpdf` landscape rendering. Use `NOTEBOOK_PDF_TO=pdf` to force LaTeX PDF export.
+- In `webpdf` mode, image embedding is enabled automatically so local banner assets and Wikipedia preview images are included in the final PDF.
+- This runs `scripts/export_notebook_pdf.py`, which sanitizes non-standard output keys (for example `jetTransient`) into a temporary `*.sanitized.ipynb`, then runs `jupyter nbconvert` with the configured output format.
+- Direct script usage:
+  - `uv run python scripts/export_notebook_pdf.py notebooks/anc_dbrx.ipynb`
+  - `uv run python scripts/export_notebook_pdf.py notebooks/anc_dbrx.ipynb --keep-sanitized`
+  - `uv run python scripts/export_notebook_pdf.py notebooks/anc_dbrx.ipynb --hide-input`
+  - `uv run python scripts/export_notebook_pdf.py notebooks/anc_dbrx.ipynb --polished`
+  - `uv run python scripts/export_notebook_pdf.py notebooks/anc_dbrx.ipynb --to webpdf`
+
+PDF polish recipes (nbconvert passthrough):
+- Hide code cells, keep narrative + outputs:
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_EXTRA_ARGS=\"--hide-input\"`
+- Hide execution prompts (`In [ ]` / `Out [ ]`):
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_EXTRA_ARGS=\"--hide-prompts\"`
+- Apply a polished report preset (hide prompts):
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_EXTRA_ARGS=\"--polished\"`
+- Use browser-style rendering for richer CSS typography:
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_EXTRA_ARGS=\"--to webpdf\"`
+- Force classic LaTeX PDF output instead of webpdf:
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_TO=pdf`
+- Disable landscape for webpdf (optional):
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_WEBPDF_LANDSCAPE=0`
+- Use a custom output filename:
+  - `make notebook-pdf NOTEBOOK=notebooks/anc_dbrx.ipynb NOTEBOOK_PDF_BASENAME=anc_dbrx_polished`
+
 ## Docs (current)
 
 - `docs/README.md`

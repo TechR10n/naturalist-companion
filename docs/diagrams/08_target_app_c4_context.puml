@@ -1,0 +1,39 @@
+@startuml 08_target_app_c4_context
+!include _common.puml
+title ANC Target App — C1 System Context
+
+left to right direction
+
+actor "Field explorer" as user
+rectangle "Naturalist Companion\n(Target system)" as anc #DBEAFE
+
+package "External systems" as ext {
+  rectangle "iOS device services\n(Camera + GPS + Photos)" as ios #DCFCE7
+  cloud "Wikipedia / Wikimedia APIs" as wiki #ECFDF5
+  cloud "Public geodata APIs\n(USGS + maps, phase 2+)" as geo #F0FDF4
+  cloud "Databricks AI platform\n(Model Serving + Vector Search + Jobs + MLflow)" as dbx #FEF3C7
+}
+
+user --> anc : asks route/camera questions
+anc --> ios : capture photos + location
+ios --> anc : media + coordinates
+anc --> wiki : retrieve cited facts
+anc --> geo : optional enrichment
+anc --> dbx : grounded generation + retrieval + eval
+anc --> user : stop cards + camera guidance + citations
+
+note right of anc
+Product scope: route guide + camera identification\nwith explicit uncertainty and source links.
+end note
+
+note bottom of dbx
+Primary AI execution plane for grounded\nretrieval, generation, and evaluation.
+end note
+
+legend bottom
+Blue: target app boundary.
+Green: user/device and public data systems.
+Amber: Databricks AI platform dependency.
+endlegend
+
+@enduml

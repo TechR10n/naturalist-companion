@@ -1,48 +1,50 @@
 @startuml 06_anc_databricks_production_app
-skinparam shadowing false
-skinparam backgroundColor #FFFFFF
-skinparam defaultTextAlignment left
-skinparam dpi 160
-skinparam ArrowColor #334155
-skinparam ArrowFontColor #334155
-skinparam note {
-  BackgroundColor #FFFBEB
-  BorderColor #B45309
-  FontColor #92400E
-}
+!include _common.puml
+title ANC — Future Production Databricks Full App
+
 skinparam activity {
   BackgroundColor #F8FAFC
   BorderColor #334155
   FontColor #0F172A
 }
-title ANC — Future Production Databricks Full App
 
+|#E0F2FE Request Path|
 start
-:Mobile/Web user asks question,\npasses route context, and optionally adds photo;
+:#E0F2FE Mobile/Web user asks question,\npasses route context, and optionally adds photo;
 :[API] receive request;
 :[Orchestrator] build retrieval/generation plan;
 :[Cache] lookup for hot prompts/routes;
 :[Vector Search] retrieve top-k\n(Unity Catalog governed);
 :[LLM/Vision endpoints] grounded generation;
 :[Policy gate] citation + safety + uncertainty checks;
-:[API] return stop cards + citations + confidence;
+:#DCFCE7 [API] return stop cards + citations + confidence;
 
 fork
-  :[Pipelines] ingest from Wikipedia + USGS + Maps;
-  :[Delta + UC] write Bronze/Silver/Gold tables;
-  :[Embedding job] batch upsert from chunk deltas;
-  :[Vector Search] refresh indexes;
+  |#ECFDF5 Data Refresh|
+  :#ECFDF5 [Pipelines] ingest from Wikipedia + USGS + Maps;
+  :#ECFDF5 [Lakebase / UC MLflow tables] write curated tables;
+  :#ECFDF5 [Embedding job] batch upsert from chunk deltas;
+  :#ECFDF5 [Vector Search] refresh indexes;
 fork again
-  :[MLflow] tracing + eval artifacts;
-  :[Monitoring] quality/latency/drift dashboards;
-  :[Jobs] refresh signals from monitoring;
+  |#FEF9C3 Observability|
+  :#FEF9C3 [MLflow] tracing + eval artifacts;
+  :#FEF9C3 [Monitoring] quality/latency/drift dashboards;
+  :#FEF9C3 [Jobs] refresh signals from monitoring;
 end fork
 
-:[Free Edition controls]\nbatch refresh windows + strict top-k budgets +\nsmaller default model tier + aggressive cache;
+|#FFF7ED Cost Controls|
+:#FFF7ED [Free Edition controls]\nbatch refresh windows + strict top-k budgets +\nsmaller default model tier + aggressive cache;
 stop
 
 note right
 Real-data path replaces fallback retrieval adapters,\nwhile preserving output schema and quality gates.
 end note
+
+legend bottom
+Blue lane: request/response path.
+Green lane: scheduled ingest + indexing.
+Yellow lane: monitoring and eval loop.
+Orange lane: cost guardrails for free-tier operation.
+endlegend
 
 @enduml

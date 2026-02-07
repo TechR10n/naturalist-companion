@@ -1,0 +1,73 @@
+@startuml 12_anc_dbrx_current_notebook_touchpoints
+!include _common.puml
+title ANC — DBRX Current Notebook Touchpoints (Today)
+
+top to bottom direction
+skinparam dpi 130
+skinparam defaultFontSize 11
+skinparam nodesep 24
+skinparam ranksep 34
+
+actor "Notebook user / evaluator" as user
+
+package "Local notebook runtime" as runtime {
+  package "Baseline cells (Stages 1-3)" as baseline {
+    rectangle "Stage 1 load\nWikipediaLoader + previews" as s1 #DBEAFE
+    rectangle "Stage 2 index\nsplit + embed + FAISS" as s2 #DBEAFE
+    rectangle "Stage 3 answer\nChatDatabricks" as s3 #DBEAFE
+  }
+  package "StateGraph + eval cells" as sgpack {
+    rectangle "StateGraph run/eval\nbuild_stategraph_app\nrun_stategraph\nrun_i81_eval_harness" as sg #BBF7D0
+    rectangle "MLflow autolog\nmlflow.langchain.autolog()" as autolog #FEF9C3
+  }
+}
+
+package "Databricks workspace" as dbx {
+  rectangle "Model Serving endpoint\nEmbeddings" as emb #FEF3C7
+  rectangle "Model Serving endpoint\nLLM (chat)" as llm #FEF3C7
+  rectangle "MLflow tracking" as mlflow #FEF9C3
+}
+
+cloud "Wikipedia / Wikimedia APIs" as wiki
+cloud "OpenStreetMap preview tiles" as osm
+database "Local FAISS index\nANC_FAISS_DIR + notebook namespace folder" as faiss_local #E9D5FF
+database "Local StateGraph store + cache\nout/stategraph_store + sqlite cache" as sg_store #E9D5FF
+database "Notebook run/eval artifacts\nout/stategraph/notebook_runs\nout/stategraph/notebook_eval" as artifacts #FDE68A
+
+user --> s1 : run baseline cells
+s1 --> wiki : pages + metadata
+s1 --> wiki : image previews
+s1 --> osm : map previews
+s1 --> s2 : docs
+s2 --> s3 : context
+
+s2 --> emb : embed batches
+s2 --> faiss_local : build + save
+faiss_local --> s3 : top-k retrieval
+s3 --> llm : grounded prompt
+s3 --> user : answer + citations
+
+user --> sg : run SG/eval cells
+sg --> llm : databricks generation
+sg --> wiki : realistic retrieval
+sg --> sg_store : persistent index + cache
+sg --> artifacts : run/eval outputs
+sg --> mlflow : quality + eval metrics
+autolog --> mlflow : LangChain traces
+
+note bottom of sg
+This reflects current notebook behavior,\nnot the full production Databricks app topology.
+end note
+
+note bottom of s2
+Baseline path uses local FAISS storage even when\nembedding calls are served by Databricks endpoints.
+end note
+
+legend bottom
+Blue: baseline 3-stage notebook flow.
+Green: StateGraph run/eval flow.
+Purple: local persistence and cache artifacts.
+Amber: Databricks serving + MLflow touchpoints.
+endlegend
+
+@enduml

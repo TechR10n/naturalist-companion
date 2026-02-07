@@ -1,0 +1,78 @@
+@startuml 10_target_app_c4_component
+!include _common.puml
+title ANC Target App — C3 Component View (Backend API)
+scale max 2400 width
+
+top to bottom direction
+
+actor "Field explorer" as user
+
+package "Backend API (Flask/FastAPI target)" as backend {
+  rectangle "GuideController\nPOST /api/guide" as guide_api #BFDBFE
+  rectangle "VisionController\nPOST /api/vision" as vision_api #BBF7D0
+
+  package "Route path" as route_path {
+    rectangle "Route Guide Orchestrator\nStateGraph app" as orchestrator #DBEAFE
+    rectangle "Routing + Clarification\nanswerable_now / retry / clarify" as routing #DBEAFE
+    rectangle "Retriever Fanout\nvector + keyword retrieval" as retrieve #C4B5FD
+    rectangle "Reranker + Context Builder\nstrict top-k budgets" as rerank #C4B5FD
+    rectangle "Answer Generator\nprovider adapters (DBRX/Vertex/Ollama)" as generate #FEF3C7
+  }
+
+  package "Vision path" as vision_path {
+    rectangle "Vision Adapter\nmodel call + output normalization" as vadapter #86EFAC
+  }
+
+  package "Shared services" as shared {
+    rectangle "Quality Gate\ncitation coverage + safe-stop checks" as qgate #FECACA
+    rectangle "Cache Manager\nretrieval + response cache" as cache #E9D5FF
+    rectangle "Contract Formatter\nJSON schema + markdown/story" as formatter #DCFCE7
+  }
+}
+
+database "Vector index / chunk store" as vecstore #DDD6FE
+database "Cache store\n(sqlite/redis)" as cachedb #E9D5FF
+cloud "Model Serving endpoints" as model #FEF3C7
+cloud "Wikipedia API" as wiki
+database "Run artifacts + eval logs" as artifacts #FEF9C3
+
+user --> guide_api : route request
+user --> vision_api : image request
+
+guide_api --> orchestrator : normalized payload
+orchestrator --> routing : decide flow
+routing --> cache : response cache lookup
+routing --> retrieve : retrieval path
+retrieve --> vecstore : top-k search
+retrieve --> wiki : live page fetch (optional)
+retrieve --> cache : retrieval cache read/write
+retrieve --> rerank : candidates
+rerank --> generate : grounded context
+generate --> model : LLM / embedding calls
+generate --> qgate : claims + citations
+qgate --> formatter : pass or safe-stop
+formatter --> guide_api : guide + trace
+
+vision_api --> vadapter : images + note
+vadapter --> model : vision inference
+vadapter --> qgate : hypothesis + confidence
+qgate --> formatter : policy-checked payload
+formatter --> vision_api : vision contract
+
+orchestrator --> artifacts : node timings + snapshots
+qgate --> artifacts : quality decisions
+cache --> cachedb : persist entries
+
+note bottom of qgate
+Single quality gate keeps route and vision outputs\non one policy and citation contract.
+end note
+
+legend bottom
+Route and vision paths stay separate until shared Quality Gate.
+Shared services centralize schema, policy, and caching.
+Blue: route request path.
+Green: vision request path.
+Red: policy gate. Purple: retrieval/cache storage.
+endlegend
+
+@enduml

@@ -45,7 +45,6 @@ fabric.properties
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 .venv
 .chroma/

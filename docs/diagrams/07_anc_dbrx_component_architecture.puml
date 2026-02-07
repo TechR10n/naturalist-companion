@@ -1,0 +1,62 @@
+@startuml 07_anc_dbrx_component_architecture
+!include _common.puml
+title ANC — DBRX Component Architecture (Databricks Target)
+scale max 2400 width
+
+actor "Notebook user / evaluator" as user
+top to bottom direction
+
+package "ANC DBRX notebook runtime" as runtime {
+  rectangle "Notebook controller\n(anc_dbrx.ipynb)" as nb #DBEAFE
+  rectangle "StateGraph orchestrator\n(route -> retrieve -> rerank -> generate)" as orch #E0E7FF
+  rectangle "Policy + quality gate\n(citation, uncertainty, safe-stop)" as gate #FEE2E2
+  rectangle "Result formatter\n(stop cards + trace + markdown)" as fmt #DCFCE7
+}
+
+node "Databricks workspace" as dbx {
+  rectangle "Model Serving\nDBRX chat endpoint" as llm #FEF3C7
+  rectangle "Model Serving\nembedding endpoint" as emb #FEF3C7
+  database "Vector Search index\n(grounded chunks)" as vs #DDD6FE
+  database "Lakebase / Unity Catalog MLflow tables" as uc #E9D5FF
+  rectangle "Workflows jobs\ningest + embed refresh" as jobs #ECFCCB
+  rectangle "MLflow\ntraces + eval runs" as mlflow #FEF9C3
+}
+
+cloud "Wikipedia + public sources" as sources
+
+user --> nb : 1) ask question / run notebook
+nb --> orch : 2) question + route context
+orch --> emb : 3) embed query + chunks
+emb --> orch : vectors
+orch --> vs : 4) retrieval query (top-k)
+vs --> orch : chunks + metadata
+orch --> llm : 5) grounded prompt
+llm --> orch : draft answer
+orch --> gate : 6) claims + citations
+gate --> fmt : 7) approved payload
+fmt --> nb : 8) response schema
+
+jobs ..> sources : fetch docs
+jobs --> uc : write curated tables
+uc --> vs : publish indexable chunks
+jobs --> mlflow : refresh metrics
+nb --> mlflow : eval + regression tracking
+gate --> mlflow : quality logs
+
+note bottom of gate
+Free-tier controls:\nstrict top-k cap,\ncache-first retries,\nsmaller default model.
+end note
+
+note bottom of uc
+Curated storage is the authoritative source\nfor Vector Search refresh jobs.
+end note
+
+legend bottom
+Solid arrows: request/answer path.
+Dashed arrows: scheduled refresh path.
+Blue/purple: notebook orchestration.
+Yellow/green: model serving + operations.
+Red: policy and quality controls.
+endlegend
+
+@enduml

@@ -1,0 +1,63 @@
+@startuml 11_target_app_c4_deployment
+!include _common.puml
+title ANC Target App — C4 Deployment View
+
+top to bottom direction
+
+actor "Field explorer" as user
+
+package "Client tier" as device {
+  rectangle "ANC iOS app" as iosapp #DBEAFE
+}
+
+package "Edge runtime (API tier)" as edge {
+  rectangle "API gateway / load balancer" as gateway #BFDBFE
+  rectangle "Guide API workers (N)" as guide_workers #BFDBFE
+  rectangle "Vision API workers (N)" as vision_workers #BBF7D0
+  database "Shared cache\n(redis/sqlite service)" as cache #E9D5FF
+}
+
+package "Databricks workspace" as dbx {
+  rectangle "Model Serving endpoints\nDBRX + embeddings + vision" as serving #FEF3C7
+  database "Vector Search" as vs #DDD6FE
+  database "Lakebase / Unity Catalog MLflow tables" as uc #E9D5FF
+  rectangle "Jobs/Workflows scheduler" as jobs #ECFCCB
+  rectangle "MLflow tracking + eval dashboards" as mlflow #FEF9C3
+}
+
+cloud "Wikipedia / Wikimedia" as wiki
+cloud "Optional geodata providers" as geo
+
+user --> iosapp : ask + capture
+iosapp --> gateway : /api/guide + /api/vision
+gateway --> guide_workers : route-guide traffic
+gateway --> vision_workers : camera traffic
+guide_workers --> cache : cache lookup
+guide_workers --> vs : retrieve chunks
+vision_workers --> serving : vision model call
+guide_workers --> serving : LLM + embedding calls
+vs --> uc : indexed from curated tables
+jobs ..> wiki : source ingest
+jobs ..> geo : enrichment ingest
+jobs --> uc : curated table writes
+jobs --> vs : reindex refresh
+guide_workers --> mlflow : traces + quality
+vision_workers --> mlflow : vision telemetry
+
+note bottom of edge
+Horizontal scale at API tier handles bursty\nmobile traffic while Databricks serves model/retrieval workloads.
+end note
+
+note bottom of dbx
+Platform tier owns retrieval state, model serving,\nand scheduled data refresh.
+end note
+
+legend bottom
+N = autoscaled worker count.
+Dashed arrows = scheduled ingestion dependencies.
+Blue/green: edge serving path.
+Purple: persistent stores.
+Yellow: platform serving + observability.
+endlegend
+
+@enduml

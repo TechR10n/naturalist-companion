@@ -1,0 +1,66 @@
+@startuml 09_target_app_c4_container
+!include _common.puml
+title ANC Target App — C2 Container View
+
+top to bottom direction
+
+actor "Field explorer" as user
+
+package "Client Layer" as client {
+  rectangle "ANC iOS app\n(UI + route planner + camera capture)" as iosapp #DBEAFE
+}
+
+package "Backend API Layer" as edge {
+  rectangle "API gateway\n(/api/guide, /api/vision)" as api #E0E7FF
+  rectangle "Route guide service\n(StateGraph orchestration)" as guide #BFDBFE
+  rectangle "Vision service\n(image classification + follow-up prompts)" as vision #BBF7D0
+  rectangle "Response policy service\n(citations, safety, uncertainty)" as policy #FECACA
+}
+
+package "Databricks Platform Layer" as dbx {
+  rectangle "Model Serving\nLLM + embeddings + vision models" as serving #FEF3C7
+  database "Vector Search index" as vs #DDD6FE
+  database "Lakebase / Unity Catalog MLflow tables\n(route corpora + metadata)" as lake #E9D5FF
+  rectangle "Jobs + Workflows\ningest, chunk, embed refresh" as jobs #ECFCCB
+  rectangle "MLflow + dashboards\neval + latency + drift" as obs #FEF9C3
+}
+
+cloud "Wikipedia / Wikimedia APIs" as wiki
+
+user --> iosapp : interacts with app
+iosapp --> api : HTTPS JSON + multipart images
+api --> guide : route requests
+api --> vision : camera requests
+guide --> serving : generate + rewrite + rerank prompts
+guide --> vs : retrieve top-k chunks
+guide --> policy : validate claims/citations
+vision --> serving : multimodal inference
+vision --> policy : confidence + follow-up checks
+policy --> api : approved contract
+guide --> api : guide payload + trace
+vision --> api : vision payload
+jobs ..> wiki : fetch sources
+jobs --> lake : write curated tables
+lake --> vs : publish index
+api --> obs : request traces
+guide --> obs : quality metrics
+vision --> obs : model metrics
+policy --> obs : gate outcomes
+
+note bottom of jobs
+Scheduled refresh cadence keeps indexes warm\nfor mobile latency targets.
+end note
+
+note bottom of policy
+Both route and vision responses pass through\nshared citation/safety checks.
+end note
+
+legend bottom
+Top-down: client -> API -> platform.
+Dashed arrow: scheduled ingest input.
+Blue/green: runtime request services.
+Purple: retrieval/state data stores.
+Yellow: serving + observability surfaces.
+endlegend
+
+@enduml
